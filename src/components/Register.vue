@@ -54,13 +54,16 @@
           >
         </div>
         
-        <div v-if="error" class="mb-6 p-3 bg-red-100 text-red-700 rounded-lg text-center">{{ error }}</div>
+        <div v-if="error" class="mb-6 p-3 rounded-lg text-center" :class="{
+          'bg-red-100 text-red-700': !isSuccess,
+          'bg-green-100 text-green-700': isSuccess
+        }">{{ error }}</div>
         
         <button 
           type="submit" 
           :disabled="loading" 
           @click="handleRegister"
-          class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-md hover:shadow-lg transition duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-md hover:shadow-lg transition duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed mb-4"
         >
           <span v-if="loading" class="flex items-center justify-center">
             <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -71,6 +74,16 @@
           </span>
           <span v-else>注册</span>
         </button>
+        
+        <div class="text-center">
+          <button 
+            type="button" 
+            @click="goToLogin" 
+            class="text-indigo-600 hover:text-indigo-800 font-medium transition duration-300"
+          >
+            返回登录页面
+          </button>
+        </div>
       </form>
     </div>
   </div>
@@ -92,8 +105,12 @@ const confirmPassword = ref('')
 const groupId = ref('')
 const error = ref('')
 const loading = ref(false)
+const isSuccess = ref(false)
 
-
+// 返回登录页面
+const goToLogin = () => {
+  router.push('/')
+}
 
 // 处理注册
 const handleRegister = async () => {
@@ -120,6 +137,7 @@ const handleRegister = async () => {
 
     if (result.success) {
       // 注册成功，跳转到登录页面
+      isSuccess.value = true
       error.value = '注册成功，请登录'
       setTimeout(() => {
         router.push('/')
