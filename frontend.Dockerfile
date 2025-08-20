@@ -8,4 +8,4 @@ RUN npm run build
 FROM joseluisq/static-web-server:2
 COPY --from=builder /app/dist /public
 EXPOSE 80
-CMD ["--port", "80", "--page-fallback", "/index.html"]
+CMD ["--port", "80", "--page-fallback", "/public/index.html"]

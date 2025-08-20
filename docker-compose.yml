@@ -2,7 +2,7 @@ services:
   frontend:
     image: lycohana/todos-frontend:latest
     ports:
-      - "3000:80"
+      - "127.0.0.1:10001:80"
     networks:
       - app-network
     depends_on:
@@ -18,6 +18,8 @@ services:
       - DB_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - DB_NAME=todos_db
       - JWT_SECRET=${JWT_SECRET}
+    ports:
+      - "127.0.0.1:10002:3000"
     networks:
       - app-network
     depends_on:
