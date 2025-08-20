@@ -1912,6 +1912,10 @@ video {
   margin-top: 2rem;
 }
 
+.ml-1 {
+  margin-left: 0.25rem;
+}
+
 .block {
   display: block;
 }
@@ -2432,6 +2436,10 @@ video {
 
 .font-semibold {
   font-weight: 600;
+}
+
+.font-normal {
+  font-weight: 400;
 }
 
 .uppercase {

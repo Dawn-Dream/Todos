@@ -613,7 +613,7 @@ app.put('/users/:id', authenticateToken, (req, res) => {
   }
   
   const { id } = req.params;
-  const { username, name, role, groupId } = req.body;
+  const { username, name, role, groupId, password } = req.body;
   
   // 构建更新查询
   let updateQuery = 'UPDATE users SET ';
@@ -639,6 +639,12 @@ app.put('/users/:id', authenticateToken, (req, res) => {
   if (groupId !== undefined) {
     updateFields.push('group_id = ?');
     updateValues.push(groupId);
+  }
+
+  if (password !== undefined && password.trim() !== '') {
+    const hashedPassword = bcrypt.hashSync(password, 8);
+    updateFields.push('password = ?');
+    updateValues.push(hashedPassword);
   }
   
   // 如果没有提供任何更新字段
@@ -872,7 +878,7 @@ app.post('/todos', authenticateToken, (req, res) => {
     }
   }
   
-  // 插入新待办事项，设置创建者为当前用户
+  // 插入新待办事项
   const insertQuery = `
     INSERT INTO TodosList 
     (name, description, Deadline, Priority, Status, Belonging_users, Belonging_groups, creator_id)
@@ -1088,9 +1094,6 @@ function startServer() {
   });
 }
 
-// 只在数据库初始化完成后启动服务器
-// 这里我们在initializeDatabase函数中调用startServer
-
 // 获取任务详情存储路径
 function getTodoDetailPath(todoId) {
   const todoDetailsDir = path.join(__dirname, 'todo-details');
@@ -1113,7 +1116,6 @@ app.post('/todo-details/:id', authenticateToken, (req, res) => {
   
   const detailPath = getTodoDetailPath(id);
   
-  // 创建详情数据对象
   const detailData = {
     todoId: id,
     detail: detail,
@@ -1137,7 +1139,6 @@ app.get('/todo-details/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
   const detailPath = getTodoDetailPath(id);
   
-  // 检查文件是否存在
   if (!fs.existsSync(detailPath)) {
     return res.status(404).json({ message: '任务详情不存在' });
   }

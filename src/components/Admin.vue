@@ -436,6 +436,20 @@
         </div>
         
         <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-bold mb-2" for="edit-user-password">
+            密码
+            <span class="text-xs text-gray-500 font-normal ml-1">(留空表示不修改)</span>
+          </label>
+          <input 
+            v-model="editUserPassword" 
+            id="edit-user-password" 
+            type="password" 
+            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
+            placeholder="请输入新密码"
+          >
+        </div>
+        
+        <div class="mb-4">
           <label class="block text-gray-700 text-sm font-bold mb-2" for="edit-user-name">
             姓名 *
           </label>
@@ -674,6 +688,7 @@ const editUserUsername = ref('')
 const editUserName = ref('')
 const editUserRole = ref('user')
 const editUserGroupId = ref('')
+const editUserPassword = ref('')
 
 // 添加用户组模态框数据
 const isAddGroupModalVisible = ref(false)
@@ -725,6 +740,7 @@ const showEditUserModal = (user) => {
   editUserName.value = user.name || ''
   editUserRole.value = user.role || 'user'
   editUserGroupId.value = user.group_id || ''
+  editUserPassword.value = '' // 清空密码字段
   
   // 显示模态框
   isEditUserModalVisible.value = true
@@ -841,6 +857,11 @@ const submitEditUser = async () => {
       name: editUserName.value,
       role: editUserRole.value,
       groupId: editUserGroupId.value || null
+    }
+    
+    // 如果密码字段不为空，则添加到请求数据中
+    if (editUserPassword.value.trim()) {
+      userData.password = editUserPassword.value.trim()
     }
     
     // 发送请求到/users/:id接口
