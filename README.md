@@ -136,7 +136,12 @@ npm run dev
 
 # 构建生产版本
 npm run build
+
+# 启动tailwindcss watch
+npm run tailwind:watch
 ```
+
+
 
 #### 后端开发
 ```bash
