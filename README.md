@@ -55,6 +55,8 @@
 - **JWT**：JSON Web Token认证
 - **bcryptjs**：密码加密库
 - **CORS**：跨域资源共享
+- **数据库迁移系统**：版本控制的数据库架构管理
+- **并发锁机制**：MySQL命名锁防止迁移冲突
 
 ### 部署
 - **Docker**：容器化部署
@@ -92,8 +94,11 @@ Todos/
 │       └── auth.js      # 认证状态管理
 ├── backend/             # 后端源码
 │   ├── index.js         # 主服务文件
-│   ├── design.md        # 后端设计文档
 │   ├── package.json     # 后端依赖配置
+│   ├── database/        # 数据库模块
+│   │   ├── connection.js    # 数据库连接管理
+│   │   ├── schema.js        # 表结构定义
+│   │   └── migration.js     # 迁移系统
 │   └── todo-details/    # 任务详情存储目录
 └── public/              # 静态资源
     └── favicon.ico      # 网站图标
@@ -150,11 +155,37 @@ cd backend
 # 安装依赖
 npm install
 
-# 启动开发服务器
+# 配置环境变量（复制并编辑 .env 文件）
+# 设置数据库连接信息：DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
+
+# 启动开发服务器（自动执行数据库迁移）
 npm run dev
 
 # 启动生产服务器
 npm start
+```
+
+#### 数据库迁移验证
+
+首次启动后端服务时，可以通过以下方式验证迁移系统：
+
+```sql
+-- 检查迁移记录
+SELECT * FROM schema_migrations ORDER BY version;
+
+-- 验证表结构
+SHOW TABLES;
+DESCRIBE user_group_memberships;
+```
+
+预期日志输出：
+```
+创建 schema_migrations 表 成功或已存在
+开始执行迁移 v1 (initial_schema)...
+迁移 v1 (initial_schema) 执行完成
+开始执行迁移 v2 (migrate_user_group_memberships)...
+迁移 v2 (migrate_user_group_memberships) 执行完成
+所有迁移已应用
 ```
 
 ## ⚙️ 环境变量配置
@@ -162,17 +193,39 @@ npm start
 创建 `.env` 文件并配置以下变量：
 
 ```env
-# 数据库配置
+# 数据库配置（Docker部署）
 MYSQL_ROOT_PASSWORD=your_super_secret_db_password
+
+# 数据库连接配置（本地开发）
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=your_database_password
+DB_NAME=todos_db
 
 # JWT配置
 JWT_SECRET=your_super_secret_jwt_key
+
+# 服务端口（可选）
+PORT=3000
 ```
 
 ### 环境变量说明
 
+#### Docker部署
 - `MYSQL_ROOT_PASSWORD`：MySQL数据库root用户密码
 - `JWT_SECRET`：JWT令牌签名密钥，建议使用长随机字符串
+
+#### 本地开发
+- `DB_HOST`：数据库主机地址（默认：localhost）
+- `DB_PORT`：数据库端口（默认：3306）
+- `DB_USER`：数据库用户名（默认：root）
+- `DB_PASSWORD`：数据库密码
+- `DB_NAME`：数据库名称（默认：todos_db）
+- `JWT_SECRET`：JWT令牌签名密钥
+- `PORT`：后端服务端口（默认：3000）
+
+> **注意**：首次运行时，系统会自动创建指定的数据库（如果不存在），并执行所有必要的迁移。
 
 ## 🗄️ 数据库设计
 
@@ -182,6 +235,31 @@ JWT_SECRET=your_super_secret_jwt_key
 - **groups**：用户组信息表
 - **user_group_memberships**：用户-用户组关系表（支持多对多关系）
 - **TodosList**：任务信息表
+- **schema_migrations**：数据库迁移版本记录表
+
+### 数据库迁移系统
+
+项目采用版本化的数据库迁移系统，具有以下特性：
+
+- **版本控制**：每个迁移都有唯一的版本号和名称
+- **幂等执行**：重复运行迁移不会产生副作用
+- **并发安全**：使用MySQL命名锁防止多实例同时执行迁移
+- **自动化**：服务启动时自动检查并执行未应用的迁移
+
+#### 迁移版本历史
+
+- **v1 (initial_schema)**：创建基础表结构（groups、users、user_group_memberships、TodosList）
+- **v2 (migrate_user_group_memberships)**：迁移历史用户组关系数据
+
+#### 迁移执行流程
+
+1. 服务启动时连接数据库
+2. 创建或检查 `schema_migrations` 表
+3. 获取迁移锁（防止并发执行）
+4. 检查已应用的迁移版本
+5. 按顺序执行未应用的迁移
+6. 记录迁移执行状态
+7. 释放迁移锁
 
 ### 任务状态说明
 
@@ -260,6 +338,8 @@ JWT_SECRET=your_super_secret_jwt_key
 - 数据库使用MySQL 8.0
 - 所有密码使用bcrypt加密存储
 - JWT令牌用于用户认证和授权
+- 数据库操作模块化，分离连接管理、架构定义和迁移逻辑
+- 采用版本化数据库迁移，确保部署一致性
 
 ### 安全特性
 - 密码加密存储

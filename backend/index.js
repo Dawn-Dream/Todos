@@ -1,11 +1,15 @@
 const express = require('express');
-const mysql = require('mysql2');
+
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
+
+// 引入新的数据库模块
+const { initializeConnection, getConnection } = require('./database/connection');
+const { runMigrations } = require('./database/migration');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -120,177 +124,26 @@ app.get('/groups/:groupId/members', authenticateToken, (req, res) => {
   });
 });
 
-let dbInit = mysql.createConnection({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  charset: 'utf8mb4'
-});
+// 移除旧的 dbInit 和 initializeDatabase 实现，改为模块化启动
+async function bootstrap() {
+  try {
+    // 1) 初始化数据库连接并确保数据库存在
+    await initializeConnection({ database: process.env.DB_NAME || 'todos_db' });
+    db = getConnection();
 
-function initializeDatabase(reconnectCount = 0) {
-  const maxReconnectAttempts = 10;
-  
-  dbInit.connect((err) => {
-    if (err) {
-      console.error('MySQL服务器连接失败:', err);
-      if (reconnectCount < maxReconnectAttempts) {
-        console.log(`尝试重新连接 (${reconnectCount + 1}/${maxReconnectAttempts})...`);
-        setTimeout(() => {
-          // 重新创建连接
-          dbInit = mysql.createConnection({
-            host: process.env.DB_HOST,
-            port: process.env.DB_PORT,
-            user: process.env.DB_USER,
-            password: process.env.DB_PASSWORD,
-            charset: 'utf8mb4'
-          });
-          initializeDatabase(reconnectCount + 1);
-        }, 5000); // 2秒后重试
-      } else {
-        console.error('达到最大重新连接尝试次数，无法连接到MySQL服务器');
-        process.exit(1); // 退出进程
-      }
-      return;
-    }
-    console.log('成功连接到MySQL服务器');
-    
-    dbInit.query('CREATE DATABASE IF NOT EXISTS ?? CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci', [process.env.DB_NAME || 'todos_db'], (err) => {
-      if (err) {
-        console.error('创建数据库失败:', err);
-        return;
-      }
-      console.log('数据库已创建或已存在');
-      
-      dbInit.end();
+    // 2) 执行迁移（DDL + 数据迁移），确保表结构和旧数据迁移完成
+    await runMigrations();
 
-      db = mysql.createConnection({
-        host: process.env.DB_HOST,
-        port: process.env.DB_PORT,
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        database: process.env.DB_NAME,
-        charset: 'utf8mb4'
-      });
-
-      db.connect((err) => {
-        if (err) {
-          console.error('数据库连接失败:', err);
-          if (reconnectCount < maxReconnectAttempts) {
-            console.log(`尝试重新连接到数据库 (${reconnectCount + 1}/${maxReconnectAttempts})...`);
-            setTimeout(() => {
-              initializeDatabase(reconnectCount + 1);
-            }, 2000); // 2秒后重试
-          } else {
-            console.error('达到最大重新连接尝试次数，无法连接到数据库');
-            process.exit(1); // 退出进程
-          }
-          return;
-        }
-        console.log('成功连接到MySQL数据库');
-
-        const createGroupsTableQuery = `
-          CREATE TABLE IF NOT EXISTS \`groups\` (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            name VARCHAR(50) UNIQUE NOT NULL,
-            description TEXT,
-            leaders TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          )
-        `;
-        
-        db.query(createGroupsTableQuery, (err) => {
-          if (err) {
-            console.error('创建用户组表失败:', err);
-            return;
-          }
-          console.log('用户组表已创建或已存在');
-          
-          const createTableQuery = `
-            CREATE TABLE IF NOT EXISTS users (
-              id INT AUTO_INCREMENT PRIMARY KEY,
-              username VARCHAR(50) UNIQUE NOT NULL,
-              name VARCHAR(100) NOT NULL,
-              password VARCHAR(255) NOT NULL,
-              role VARCHAR(20) DEFAULT 'user',
-              group_id INT DEFAULT NULL,
-              FOREIGN KEY (group_id) REFERENCES \`groups\`(id) ON DELETE SET NULL,
-              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-          `;
-        
-          db.query(createTableQuery, (err) => {
-            if (err) {
-              console.error('创建用户表失败:', err);
-              return;
-            }
-            console.log('用户表已创建或已存在');
-            
-            // 创建用户组成员关系表
-            const createUserGroupMembershipsTableQuery = `
-              CREATE TABLE IF NOT EXISTS user_group_memberships (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                group_id INT NOT NULL,
-                joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                FOREIGN KEY (group_id) REFERENCES \`groups\`(id) ON DELETE CASCADE,
-                UNIQUE KEY unique_user_group (user_id, group_id)
-              )
-            `;
-            
-            db.query(createUserGroupMembershipsTableQuery, (err) => {
-              if (err) {
-                console.error('创建用户组成员关系表失败:', err);
-                return;
-              }
-              console.log('用户组成员关系表已创建或已存在');
-              
-              // 创建TodosList表
-              const createTodosListTableQuery = `
-                CREATE TABLE IF NOT EXISTS TodosList (
-                  id INT AUTO_INCREMENT PRIMARY KEY,
-                  name VARCHAR(255) NOT NULL,
-                  description TEXT,
-                  Belonging_users TEXT,
-                  Belonging_groups TEXT,
-                  Completion_time DATETIME,
-                  create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                  update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                  delete_time TIMESTAMP NULL,
-                  Deadline DATETIME,
-                  Priority INT DEFAULT 0,
-                  Status INT DEFAULT 0,
-                  creator_id INT,
-                  administrator_id INT,
-                  FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE SET NULL,
-                  FOREIGN KEY (administrator_id) REFERENCES users(id) ON DELETE SET NULL
-                )
-              `;
-            
-            db.query(createTodosListTableQuery, (err) => {
-              if (err) {
-                console.error('创建TodosList表失败:', err);
-                return;
-              }
-              console.log('TodosList表已创建或已存在');
-              
-              // 数据迁移：将现有的group_id数据迁移到user_group_memberships表
-              migrateExistingGroupData(db);
-              
-              // 初始化默认用户
-              initializeDefaultUsers(db);
-            });
-          });
-        });
-      });
-    });
-  });
-  });
+    // 3) 初始化默认数据并启动服务器
+    initializeDefaultUsers(db);
+  } catch (err) {
+    console.error('服务启动失败:', err);
+    process.exit(1);
+  }
 }
 
-// 调用初始化函数
-initializeDatabase();
+// 调用新的启动流程
+bootstrap();
 
 // 更新用户组成员关系函数
 function updateUserGroupMemberships(userId, groupIds, callback) {
@@ -327,41 +180,9 @@ function updateUserGroupMemberships(userId, groupIds, callback) {
   });
 }
 
-// 数据迁移函数：将现有的group_id数据迁移到user_group_memberships表
-function migrateExistingGroupData(db) {
-  // 查询所有有group_id的用户
-  const selectUsersWithGroupQuery = 'SELECT id, group_id FROM users WHERE group_id IS NOT NULL';
-  
-  db.query(selectUsersWithGroupQuery, (err, users) => {
-    if (err) {
-      console.error('查询用户组数据失败:', err);
-      return;
-    }
-    
-    if (users.length === 0) {
-      console.log('没有需要迁移的用户组数据');
-      return;
-    }
-    
-    console.log(`开始迁移 ${users.length} 条用户组关系数据`);
-    
-    // 为每个用户创建用户组成员关系记录
-    users.forEach(user => {
-      const insertMembershipQuery = `
-        INSERT IGNORE INTO user_group_memberships (user_id, group_id) 
-        VALUES (?, ?)
-      `;
-      
-      db.query(insertMembershipQuery, [user.id, user.group_id], (err) => {
-        if (err) {
-          console.error(`迁移用户 ${user.id} 的组关系失败:`, err);
-        } else {
-          console.log(`成功迁移用户 ${user.id} 到组 ${user.group_id}`);
-        }
-      });
-    });
-  });
-}
+// mysql2 连接已迁移至 ./database/connection 模块，不再直接在此引用
+// 迁移逻辑已模块化至 ./database/migration.js
+
 
 // 初始化默认用户
 function initializeDefaultUsers(db) {
