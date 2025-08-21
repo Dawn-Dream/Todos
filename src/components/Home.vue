@@ -28,8 +28,8 @@
             </svg>
           </div>
           <div class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-20">
-            <a href="#" class="block px-4 py-2 text-sm text-gray-100 hover:bg-gray-100">个人信息</a>
-            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">系统设置</a>
+            <a href="#" class="block px-4 py-2 text-sm text-gray-500 hover:bg-gray-100">个人信息 </a>
+            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">系统设置 未实现</a>
             <a v-if="user && user.role === 'admin'" href="/admin" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">后台管理</a>
             <button @click="forceLogout" class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200">
               <span class="flex items-center text-red-600 font-medium">
@@ -43,7 +43,9 @@
         </div>
       </div>
     </nav>
+    
     <div class="container mx-auto px-4 pt-20 pb-8">
+      <!-- 饼：组长可在此处设置通知 -->
       <h1 class="text-3xl font-bold text-gray-800 mb-6">欢迎来到任务管理系统</h1>
       <p class="text-gray-600 mb-8">在这里您可以管理您的所有任务，提高工作效率。</p>
       
@@ -630,7 +632,7 @@ const fetchTodos = async () => {
       Priority: String(todo.Priority)
     }))
     
-    console.log('获取Todos数据:', todos.value)
+    //console.log('获取Todos数据:', todos.value)
   } catch (err) {
     console.error('获取Todos数据失败:', err)
     error.value = '获取任务列表失败，请重试'

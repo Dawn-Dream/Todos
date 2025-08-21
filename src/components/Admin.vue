@@ -71,7 +71,7 @@
               <tr v-for="user in users" :key="user.id">
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.id }}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ user.username }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.group_name }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.groups ? user.groups.map(g => g.name).join(', ') : '' }}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
                   <button 
                     @click="showEditUserModal(user)" 
@@ -106,6 +106,7 @@
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">组名</th>
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">描述</th>
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">组长</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">成员</th>
                 <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
               </tr>
             </thead>
@@ -121,6 +122,15 @@
                     class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-1"
                   >
                     {{ getUserById(leaderId) }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <span 
+                    v-for="member in getGroupMembers(group.id)" 
+                    :key="member.id" 
+                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mr-1 mb-1"
+                  >
+                    {{ member.name }}
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
@@ -477,16 +487,30 @@
         </div>
         
         <div class="mb-4">
-          <label class="block text-gray-700 text-sm font-bold mb-2" for="edit-user-group-id">
-            用户组ID
+          <label class="block text-gray-700 text-sm font-bold mb-2">
+            用户组
           </label>
-          <input 
-            v-model="editUserGroupId" 
-            id="edit-user-group-id" 
-            type="text" 
-            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
-            placeholder="请输入用户组ID"
-          >
+          <div class="space-y-2 max-h-40 overflow-y-auto p-2 border border-gray-300 rounded">
+            <div 
+              v-for="group in groups" 
+              :key="group.id" 
+              class="flex items-center"
+            >
+              <input 
+                type="checkbox" 
+                :id="'edit-user-group-' + group.id" 
+                :value="group.id" 
+                v-model="editUserGroupIds"
+                class="mr-2 h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+              >
+              <label 
+                :for="'edit-user-group-' + group.id" 
+                class="text-sm text-gray-700"
+              >
+                {{ group.name }}
+              </label>
+            </div>
+          </div>
         </div>
       </div>
       <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end space-x-3">
@@ -687,7 +711,7 @@ const editingUser = ref(null)
 const editUserUsername = ref('')
 const editUserName = ref('')
 const editUserRole = ref('user')
-const editUserGroupId = ref('')
+const editUserGroupIds = ref([])
 const editUserPassword = ref('')
 
 // 添加用户组模态框数据
@@ -739,7 +763,7 @@ const showEditUserModal = (user) => {
   editUserUsername.value = user.username || ''
   editUserName.value = user.name || ''
   editUserRole.value = user.role || 'user'
-  editUserGroupId.value = user.group_id || ''
+  editUserGroupIds.value = user.groups ? user.groups.map(g => g.id) : []
   editUserPassword.value = '' // 清空密码字段
   
   // 显示模态框
@@ -856,7 +880,7 @@ const submitEditUser = async () => {
       username: editUserUsername.value,
       name: editUserName.value,
       role: editUserRole.value,
-      groupId: editUserGroupId.value || null
+      groupIds: editUserGroupIds.value
     }
     
     // 如果密码字段不为空，则添加到请求数据中
@@ -1210,6 +1234,13 @@ const deleteTask = async (taskId) => {
     console.error('删除任务失败:', error)
     alert('删除任务失败')
   }
+}
+
+// 获取用户组成员
+const getGroupMembers = (groupId) => {
+  return users.value.filter(user => 
+    user.groups && user.groups.some(group => group.id === groupId)
+  )
 }
 
 // 获取所有用户和组数据

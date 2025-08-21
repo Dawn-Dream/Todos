@@ -436,25 +436,25 @@ if (!user.value) {
 
 onMounted(async () => {
   try {
-    console.log('TaskDetail onMounted started')
+    //console.log('TaskDetail onMounted started')
     // 获取用户信息
     user.value = authStore.user.value || {}
-    console.log('User info:', user.value)
+    //console.log('User info:', user.value)
     
     // 获取用户组名称
     await authStore.fetchGroupName()
     groupName.value = authStore.groupName.value
-    console.log('Group name:', groupName.value)
+    //console.log('Group name:', groupName.value)
     
     // 获取所有用户和组数据
     await fetchAllUsers()
     await fetchAllGroups()
-    console.log('All users:', allUsers.value)
-    console.log('All groups:', allGroups.value)
+    //console.log('All users:', allUsers.value)
+    //console.log('All groups:', allGroups.value)
     
     // 获取任务详情
     await fetchTodo()
-    console.log('Todo data:', todo.value)
+    //console.log('Todo data:', todo.value)
   } catch (error) {
     console.error('Error in onMounted:', error)
     error.value = '页面加载失败: ' + error.message
@@ -506,7 +506,7 @@ const getGroupById = (id) => {
 // 获取任务详情
 const fetchTodo = async () => {
   try {
-    console.log('Fetching todo with ID:', route.params.id)
+    //console.log('Fetching todo with ID:', route.params.id)
     loading.value = true
     error.value = null
     
@@ -516,9 +516,9 @@ const fetchTodo = async () => {
       }
     })
     
-    console.log('Todo response:', response.data)
+    //console.log('Todo response:', response.data)
     todo.value = response.data.todo
-    console.log('Todo value set:', todo.value)
+    //console.log('Todo value set:', todo.value)
     
     // 检查用户是否有编辑权限
     checkEditPermission()

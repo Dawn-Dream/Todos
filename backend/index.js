@@ -27,6 +27,99 @@ app.use((req, res, next) => {
   next();
 });
 
+// 添加用户到用户组API
+app.post('/users/:userId/groups/:groupId', authenticateToken, (req, res) => {
+  // 检查当前用户是否为管理员
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: '权限不足，只有管理员可以执行此操作' });
+  }
+  
+  const { userId, groupId } = req.params;
+  
+  // 检查用户和用户组是否存在
+  const checkUserQuery = 'SELECT id FROM users WHERE id = ?';
+  const checkGroupQuery = 'SELECT id FROM `groups` WHERE id = ?';
+  
+  db.query(checkUserQuery, [userId], (err, userResults) => {
+    if (err) {
+      console.error('检查用户失败:', err);
+      return res.status(500).json({ message: '服务器内部错误' });
+    }
+    
+    if (userResults.length === 0) {
+      return res.status(404).json({ message: '用户不存在' });
+    }
+    
+    db.query(checkGroupQuery, [groupId], (err, groupResults) => {
+      if (err) {
+        console.error('检查用户组失败:', err);
+        return res.status(500).json({ message: '服务器内部错误' });
+      }
+      
+      if (groupResults.length === 0) {
+        return res.status(404).json({ message: '用户组不存在' });
+      }
+      
+      // 添加用户到用户组
+      const insertQuery = 'INSERT IGNORE INTO user_group_memberships (user_id, group_id) VALUES (?, ?)';
+      db.query(insertQuery, [userId, groupId], (err) => {
+        if (err) {
+          console.error('添加用户到用户组失败:', err);
+          return res.status(500).json({ message: '服务器内部错误' });
+        }
+        
+        res.json({ message: '用户已成功添加到用户组' });
+      });
+    });
+  });
+});
+
+// 从用户组中移除用户API
+app.delete('/users/:userId/groups/:groupId', authenticateToken, (req, res) => {
+  // 检查当前用户是否为管理员
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: '权限不足，只有管理员可以执行此操作' });
+  }
+  
+  const { userId, groupId } = req.params;
+  
+  const deleteQuery = 'DELETE FROM user_group_memberships WHERE user_id = ? AND group_id = ?';
+  db.query(deleteQuery, [userId, groupId], (err, results) => {
+    if (err) {
+      console.error('从用户组中移除用户失败:', err);
+      return res.status(500).json({ message: '服务器内部错误' });
+    }
+    
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ message: '用户不在该用户组中' });
+    }
+    
+    res.json({ message: '用户已从用户组中移除' });
+  });
+});
+
+// 获取用户组成员API
+app.get('/groups/:groupId/members', authenticateToken, (req, res) => {
+  const { groupId } = req.params;
+  
+  const query = `
+    SELECT u.id, u.username, u.name, u.role, ugm.joined_at
+    FROM users u
+    INNER JOIN user_group_memberships ugm ON u.id = ugm.user_id
+    WHERE ugm.group_id = ?
+    ORDER BY ugm.joined_at DESC
+  `;
+  
+  db.query(query, [groupId], (err, results) => {
+    if (err) {
+      console.error('获取用户组成员失败:', err);
+      return res.status(500).json({ message: '服务器内部错误' });
+    }
+    
+    res.json({ members: results });
+  });
+});
+
 let dbInit = mysql.createConnection({
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
@@ -133,27 +226,47 @@ function initializeDatabase(reconnectCount = 0) {
             }
             console.log('用户表已创建或已存在');
             
-            // 创建TodosList表
-            const createTodosListTableQuery = `
-              CREATE TABLE IF NOT EXISTS TodosList (
+            // 创建用户组成员关系表
+            const createUserGroupMembershipsTableQuery = `
+              CREATE TABLE IF NOT EXISTS user_group_memberships (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                name VARCHAR(255) NOT NULL,
-                description TEXT,
-                Belonging_users TEXT,
-                Belonging_groups TEXT,
-                Completion_time DATETIME,
-                create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                delete_time TIMESTAMP NULL,
-                Deadline DATETIME,
-                Priority INT DEFAULT 0,
-                Status INT DEFAULT 0,
-                creator_id INT,
-                administrator_id INT,
-                FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE SET NULL,
-                FOREIGN KEY (administrator_id) REFERENCES users(id) ON DELETE SET NULL
+                user_id INT NOT NULL,
+                group_id INT NOT NULL,
+                joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (group_id) REFERENCES \`groups\`(id) ON DELETE CASCADE,
+                UNIQUE KEY unique_user_group (user_id, group_id)
               )
             `;
+            
+            db.query(createUserGroupMembershipsTableQuery, (err) => {
+              if (err) {
+                console.error('创建用户组成员关系表失败:', err);
+                return;
+              }
+              console.log('用户组成员关系表已创建或已存在');
+              
+              // 创建TodosList表
+              const createTodosListTableQuery = `
+                CREATE TABLE IF NOT EXISTS TodosList (
+                  id INT AUTO_INCREMENT PRIMARY KEY,
+                  name VARCHAR(255) NOT NULL,
+                  description TEXT,
+                  Belonging_users TEXT,
+                  Belonging_groups TEXT,
+                  Completion_time DATETIME,
+                  create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                  update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                  delete_time TIMESTAMP NULL,
+                  Deadline DATETIME,
+                  Priority INT DEFAULT 0,
+                  Status INT DEFAULT 0,
+                  creator_id INT,
+                  administrator_id INT,
+                  FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE SET NULL,
+                  FOREIGN KEY (administrator_id) REFERENCES users(id) ON DELETE SET NULL
+                )
+              `;
             
             db.query(createTodosListTableQuery, (err) => {
               if (err) {
@@ -161,6 +274,9 @@ function initializeDatabase(reconnectCount = 0) {
                 return;
               }
               console.log('TodosList表已创建或已存在');
+              
+              // 数据迁移：将现有的group_id数据迁移到user_group_memberships表
+              migrateExistingGroupData(db);
               
               // 初始化默认用户
               initializeDefaultUsers(db);
@@ -170,10 +286,82 @@ function initializeDatabase(reconnectCount = 0) {
       });
     });
   });
+  });
 }
 
 // 调用初始化函数
 initializeDatabase();
+
+// 更新用户组成员关系函数
+function updateUserGroupMemberships(userId, groupIds, callback) {
+  // 首先删除用户的所有现有组关系
+  const deleteQuery = 'DELETE FROM user_group_memberships WHERE user_id = ?';
+  
+  db.query(deleteQuery, [userId], (err) => {
+    if (err) {
+      return callback(err);
+    }
+    
+    // 如果groupIds为空数组或null，则只删除不添加
+    if (!groupIds || groupIds.length === 0) {
+      return callback(null);
+    }
+    
+    // 为每个组ID创建新的关系记录
+    const insertPromises = groupIds.map(groupId => {
+      return new Promise((resolve, reject) => {
+        const insertQuery = 'INSERT INTO user_group_memberships (user_id, group_id) VALUES (?, ?)';
+        db.query(insertQuery, [userId, groupId], (err) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
+      });
+    });
+    
+    Promise.all(insertPromises)
+      .then(() => callback(null))
+      .catch(err => callback(err));
+  });
+}
+
+// 数据迁移函数：将现有的group_id数据迁移到user_group_memberships表
+function migrateExistingGroupData(db) {
+  // 查询所有有group_id的用户
+  const selectUsersWithGroupQuery = 'SELECT id, group_id FROM users WHERE group_id IS NOT NULL';
+  
+  db.query(selectUsersWithGroupQuery, (err, users) => {
+    if (err) {
+      console.error('查询用户组数据失败:', err);
+      return;
+    }
+    
+    if (users.length === 0) {
+      console.log('没有需要迁移的用户组数据');
+      return;
+    }
+    
+    console.log(`开始迁移 ${users.length} 条用户组关系数据`);
+    
+    // 为每个用户创建用户组成员关系记录
+    users.forEach(user => {
+      const insertMembershipQuery = `
+        INSERT IGNORE INTO user_group_memberships (user_id, group_id) 
+        VALUES (?, ?)
+      `;
+      
+      db.query(insertMembershipQuery, [user.id, user.group_id], (err) => {
+        if (err) {
+          console.error(`迁移用户 ${user.id} 的组关系失败:`, err);
+        } else {
+          console.log(`成功迁移用户 ${user.id} 到组 ${user.group_id}`);
+        }
+      });
+    });
+  });
+}
 
 // 初始化默认用户
 function initializeDefaultUsers(db) {
@@ -589,19 +777,45 @@ app.get('/users', authenticateToken, (req, res) => {
       u.id, 
       u.username, 
       u.name, 
-      u.role, 
-      u.group_id,
-      g.name AS group_name
+      u.role
     FROM users u
-    LEFT JOIN \`groups\` g ON u.group_id = g.id
   `;
-  db.query(query, (err, results) => {
+  
+  db.query(query, (err, users) => {
     if (err) {
       console.error('数据库查询错误:', err);
       return res.status(500).json({ message: '服务器内部错误' });
     }
     
-    res.json({ users: results });
+    // 为每个用户获取其所属的用户组
+    const userPromises = users.map(user => {
+      return new Promise((resolve, reject) => {
+        const groupQuery = `
+          SELECT g.id, g.name
+          FROM \`groups\` g
+          INNER JOIN user_group_memberships ugm ON g.id = ugm.group_id
+          WHERE ugm.user_id = ?
+        `;
+        
+        db.query(groupQuery, [user.id], (err, groups) => {
+          if (err) {
+            reject(err);
+          } else {
+            user.groups = groups;
+            resolve(user);
+          }
+        });
+      });
+    });
+    
+    Promise.all(userPromises)
+      .then(usersWithGroups => {
+        res.json({ users: usersWithGroups });
+      })
+      .catch(err => {
+        console.error('获取用户组信息失败:', err);
+        res.status(500).json({ message: '服务器内部错误' });
+      });
   });
 });
 
@@ -613,7 +827,7 @@ app.put('/users/:id', authenticateToken, (req, res) => {
   }
   
   const { id } = req.params;
-  const { username, name, role, groupId, password } = req.body;
+  const { username, name, role, groupIds, password } = req.body;
   
   // 构建更新查询
   let updateQuery = 'UPDATE users SET ';
@@ -636,10 +850,7 @@ app.put('/users/:id', authenticateToken, (req, res) => {
     updateFields.push('role = ?');
     updateValues.push(role);
   }
-  if (groupId !== undefined) {
-    updateFields.push('group_id = ?');
-    updateValues.push(groupId);
-  }
+  // groupIds将在后续单独处理，不在这里更新users表的group_id字段
 
   if (password !== undefined && password.trim() !== '') {
     const hashedPassword = bcrypt.hashSync(password, 8);
@@ -665,7 +876,18 @@ app.put('/users/:id', authenticateToken, (req, res) => {
       return res.status(404).json({ message: '未找到指定的用户' });
     }
     
-    res.json({ message: '用户更新成功' });
+    // 如果提供了groupIds，更新用户组关系
+    if (groupIds !== undefined) {
+      updateUserGroupMemberships(id, groupIds, (err) => {
+        if (err) {
+          console.error('更新用户组关系失败:', err);
+          return res.status(500).json({ message: '用户信息更新成功，但用户组关系更新失败' });
+        }
+        res.json({ message: '用户更新成功' });
+      });
+    } else {
+      res.json({ message: '用户更新成功' });
+    }
   });
 });
 
@@ -752,17 +974,34 @@ function authenticateToken(req, res, next) {
       
       // 添加用户信息到req.user，确保中文字符正确处理
       const user = results[0];
-      req.user = {
-        userId: user.id,
-        username: user.username,
-        name: user.name,
-        role: user.role,
-        groupId: user.group_id || null
-      };
       
-      // 确保响应头设置正确的字符集
-      res.setHeader('Content-Type', 'application/json; charset=utf-8');
-      next();
+      // 获取用户的所有用户组
+      const groupQuery = `
+        SELECT g.id, g.name
+        FROM \`groups\` g
+        INNER JOIN user_group_memberships ugm ON g.id = ugm.group_id
+        WHERE ugm.user_id = ?
+      `;
+      
+      db.query(groupQuery, [user.id], (err, groupResults) => {
+        if (err) {
+          console.error('获取用户组信息失败:', err);
+          return res.status(500).json({ message: '服务器内部错误' });
+        }
+        
+        req.user = {
+          userId: user.id,
+          username: user.username,
+          name: user.name,
+          role: user.role,
+          groups: groupResults,
+          groupIds: groupResults.map(g => g.id)
+        };
+        
+        // 确保响应头设置正确的字符集
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        next();
+      });
     });
   });
 }
@@ -804,13 +1043,18 @@ async function checkTodoPermission(req, res, next) {
         return next();
       }
       
-      // 检查是否是关联用户组的组长
+      // 检查是否是关联用户组的组长或成员
       if (todo.Belonging_groups) {
-        const groupIds = todo.Belonging_groups.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+        const todoGroupIds = todo.Belonging_groups.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+        const userGroupIds = req.user.groupIds || [];
         
-        if (groupIds.length > 0) {
-          const groupQuery = 'SELECT leaders FROM `groups` WHERE id IN (?)';
-          db.query(groupQuery, [groupIds], (err, groupResults) => {
+        // 检查用户是否属于任何关联的用户组
+        const hasGroupAccess = todoGroupIds.some(groupId => userGroupIds.includes(groupId));
+        
+        if (hasGroupAccess) {
+          // 如果用户属于关联组，还需要检查是否是组长
+          const groupQuery = 'SELECT id, leaders FROM `groups` WHERE id IN (?)';
+          db.query(groupQuery, [todoGroupIds], (err, groupResults) => {
             if (err) {
               console.error('查询用户组失败:', err);
               return res.status(500).json({ message: '服务器内部错误' });
@@ -818,7 +1062,7 @@ async function checkTodoPermission(req, res, next) {
             
             // 检查用户是否是任何关联组的组长
             for (const group of groupResults) {
-              if (group.leaders) {
+              if (userGroupIds.includes(group.id) && group.leaders) {
                 const leaders = JSON.parse(group.leaders);
                 if (Array.isArray(leaders) && leaders.includes(userId)) {
                   return next();
@@ -826,11 +1070,11 @@ async function checkTodoPermission(req, res, next) {
               }
             }
             
-            // 如果以上条件都不满足，则拒绝访问
-            return res.status(403).json({ message: '您没有权限执行此操作' });
+            // 如果是组成员但不是组长，则拒绝访问（只有组长可以编辑/删除）
+            return res.status(403).json({ message: '只有用户组组长才能执行此操作' });
           });
         } else {
-          // 如果没有关联组且不是创建者或管理员，则拒绝访问
+          // 如果用户不属于任何关联组，则拒绝访问
           return res.status(403).json({ message: '您没有权限执行此操作' });
         }
       } else {
