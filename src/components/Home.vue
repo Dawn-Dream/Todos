@@ -14,13 +14,20 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
-                {{ groupName || '无用户组' }}
-                <span v-if="groupLeaders && groupLeaders.length > 0" class="ml-2">
-                  (组长: {{ groupLeaders.map(id => {
-                    const user = allUsers.find(u => u.id === id);
-                    return user ? user.name : id;
-                  }).join(', ') }})
-                </span>
+                <template v-if="userGroups && userGroups.length > 0">
+                  <span v-for="g in userGroups" :key="g.id" class="mr-2">
+                    {{ g.name }}
+                    <span v-if="g.leaders && g.leaders.length > 0" class="ml-1">
+                      (组长: {{ g.leaders.map(id => {
+                        const u = allUsers.find(u => u.id === id);
+                        return u ? u.name : id;
+                      }).join(', ') }})
+                    </span>
+                  </span>
+                </template>
+                <template v-else>
+                  无用户组
+                </template>
               </span>
             </div>
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -484,7 +491,7 @@
 </template>
 
 <script setup>
-import { inject, computed, ref, onMounted } from 'vue'
+import { inject, computed, ref, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 import { API_BASE_URL } from '../config'
 import { useRouter } from 'vue-router'
@@ -534,6 +541,25 @@ onMounted(async () => {
   
   // 获取Todos数据
   await fetchTodos()
+
+  // 实时同步：窗口聚焦时刷新用户组和任务
+  const onFocus = async () => {
+    await authStore.fetchUserGroups()
+    await fetchTodos()
+  }
+  window.addEventListener('focus', onFocus)
+
+  // 周期性刷新用户组和任务
+  const interval = setInterval(async () => {
+    await authStore.fetchUserGroups()
+    await fetchTodos()
+  }, 30000)
+
+  // 清理
+  onUnmounted(() => {
+    window.removeEventListener('focus', onFocus)
+    clearInterval(interval)
+  })
 })
 
 // 获取所有用户
@@ -608,31 +634,22 @@ const fetchTodos = async () => {
       }
     })
     
-    // 过滤Todos数据，仅显示用户本人或用户所在组被提及的Todo
     const userId = authStore.user.value.id
-    const userGroupId = authStore.user.value.groupId
+    const userGroupIds = (authStore.userGroups.value || []).map(g => g.id)
     
     todos.value = response.data.todos.filter(todo => {
-      // 检查是否属于当前用户
       if (todo.Belonging_users && todo.Belonging_users.includes(userId)) {
         return true
       }
-      
-      // 检查是否属于用户所在组
-      if (userGroupId && todo.Belonging_groups && todo.Belonging_groups.includes(userGroupId)) {
+      if (userGroupIds.length > 0 && todo.Belonging_groups && todo.Belonging_groups.some(gid => userGroupIds.includes(gid))) {
         return true
       }
-      
       return false
     }).map(todo => ({
       ...todo,
-      // 确保状态值是数字类型
       Status: Number(todo.Status),
-      // 确保优先级值是字符串类型
       Priority: String(todo.Priority)
     }))
-    
-    //console.log('获取Todos数据:', todos.value)
   } catch (err) {
     console.error('获取Todos数据失败:', err)
     error.value = '获取任务列表失败，请重试'
@@ -644,7 +661,10 @@ const fetchTodos = async () => {
 // 计算属性获取用户信息
 const user = computed(() => authStore.user.value)
 
-// 用户组名称
+// 从认证仓库获取多用户组
+const userGroups = computed(() => authStore.userGroups.value || [])
+
+// 用户组名称（兼容旧逻辑，可能不再用于展示）
 const groupName = computed(() => authStore.groupName.value)
 
 // 强制清除所有登录数据

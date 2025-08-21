@@ -11,8 +11,11 @@ export function createAuthStore() {
   const token = ref(localStorage.getItem('authToken') || null)
   const tokenExpiry = ref(localStorage.getItem('authTokenExpiry') || null)
   const groupName = ref('')
-
   
+  
+  
+  // 支持多用户组
+  const userGroups = ref([])
 
   // 初始化时检查token有效性
   // 注意：这里会从localStorage读取之前保存的token，如果有效则自动登录
@@ -203,6 +206,33 @@ export function createAuthStore() {
     }
   }
 
+  // 获取当前登录用户的所有用户组
+  async function fetchUserGroups() {
+    try {
+      if (!isAuthenticated.value || !token.value || !user.value) {
+        userGroups.value = []
+        return { success: false, message: '未登录或用户信息无效' }
+      }
+      const resp = await axios.get(`${API_BASE_URL}/user/groups`, {
+        headers: { Authorization: `Bearer ${token.value}` }
+      })
+      userGroups.value = resp.data.groups || []
+
+      // 同步一个聚合的groupName用于兼容旧UI（多组时用 / 拼接）
+      if (userGroups.value.length === 0) {
+        groupName.value = '默认用户组'
+      } else if (userGroups.value.length === 1) {
+        groupName.value = userGroups.value[0].name
+      } else {
+        groupName.value = userGroups.value.map(g => g.name).join(' / ')
+      }
+
+      return { success: true, groups: userGroups.value }
+    } catch (err) {
+      console.error('获取当前用户组失败:', err)
+      return { success: false, message: '获取当前用户组失败' }
+    }
+  }
   // 获取用户组名称
   async function fetchGroupName() {
     // 确保用户信息已完全加载
@@ -245,6 +275,9 @@ export function createAuthStore() {
     user,
     token,
     groupName, // 暴露groupName
+    // 多组支持
+    userGroups,
+    // 方法
     login,
     register,
     logout,
@@ -252,6 +285,7 @@ export function createAuthStore() {
     hasPermission,
     hasRole,
     refreshToken,
-    fetchGroupName // 暴露fetchGroupName方法
+    fetchGroupName, // 暴露fetchGroupName方法
+    fetchUserGroups // 暴露fetchUserGroups方法
   }
 }

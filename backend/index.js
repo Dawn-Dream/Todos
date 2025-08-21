@@ -465,9 +465,9 @@ app.get('/groups', authenticateToken, (req, res) => {
 // 根据ID获取单个用户组API
 app.get('/groups/:id', authenticateToken, (req, res) => {
   const groupId = req.params.id;
-  const query = 'SELECT * FROM \`groups\` WHERE id = ?';
+  const query = 'SELECT * FROM `groups` WHERE id = ?';
   
-  db.query(query, [groupId], (err, results) => {
+  safeQuery(query, [groupId], (err, results) => {
     if (err) {
       console.error('数据库查询错误:', err);
       return res.status(500).json({ message: '服务器内部错误' });
@@ -636,6 +636,30 @@ app.get('/users', authenticateToken, (req, res) => {
         console.error('获取用户组信息失败:', err);
         res.status(500).json({ message: '服务器内部错误' });
       });
+  });
+});
+
+// 获取当前登录用户所属的所有用户组
+app.get('/user/groups', authenticateToken, (req, res) => {
+  const userId = req.user.userId;
+  const query = `
+    SELECT g.id, g.name, g.description, g.leaders
+    FROM \`groups\` g
+    INNER JOIN user_group_memberships ugm ON g.id = ugm.group_id
+    WHERE ugm.user_id = ?
+  `;
+  safeQuery(query, [userId], (err, groups) => {
+    if (err) {
+      console.error('获取当前用户的用户组失败:', err);
+      return res.status(500).json({ message: '服务器内部错误' });
+    }
+
+    const parsedGroups = groups.map(g => ({
+      ...g,
+      leaders: g.leaders ? JSON.parse(g.leaders) : []
+    }));
+
+    res.json({ groups: parsedGroups });
   });
 });
 
