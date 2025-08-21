@@ -8,13 +8,13 @@ const path = require('path');
 require('dotenv').config();
 
 // 引入新的数据库模块
-const { initializeConnection, getConnection } = require('./database/connection');
+const { initializeConnection, getConnection, safeQuery } = require('./database/connection');
 const { runMigrations } = require('./database/migration');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-let db;
+// db变量已移除，现在使用safeQuery函数进行数据库操作
 
 // 配置CORS以允许来自前端的请求
 const corsOptions = {
@@ -44,7 +44,7 @@ app.post('/users/:userId/groups/:groupId', authenticateToken, (req, res) => {
   const checkUserQuery = 'SELECT id FROM users WHERE id = ?';
   const checkGroupQuery = 'SELECT id FROM `groups` WHERE id = ?';
   
-  db.query(checkUserQuery, [userId], (err, userResults) => {
+  safeQuery(checkUserQuery, [userId], (err, userResults) => {
     if (err) {
       console.error('检查用户失败:', err);
       return res.status(500).json({ message: '服务器内部错误' });
@@ -88,7 +88,7 @@ app.delete('/users/:userId/groups/:groupId', authenticateToken, (req, res) => {
   const { userId, groupId } = req.params;
   
   const deleteQuery = 'DELETE FROM user_group_memberships WHERE user_id = ? AND group_id = ?';
-  db.query(deleteQuery, [userId, groupId], (err, results) => {
+  safeQuery(deleteQuery, [userId, groupId], (err, results) => {
     if (err) {
       console.error('从用户组中移除用户失败:', err);
       return res.status(500).json({ message: '服务器内部错误' });
@@ -114,7 +114,7 @@ app.get('/groups/:groupId/members', authenticateToken, (req, res) => {
     ORDER BY ugm.joined_at DESC
   `;
   
-  db.query(query, [groupId], (err, results) => {
+  safeQuery(query, [groupId], (err, results) => {
     if (err) {
       console.error('获取用户组成员失败:', err);
       return res.status(500).json({ message: '服务器内部错误' });
@@ -129,13 +129,12 @@ async function bootstrap() {
   try {
     // 1) 初始化数据库连接并确保数据库存在
     await initializeConnection({ database: process.env.DB_NAME || 'todos_db' });
-    db = getConnection();
 
     // 2) 执行迁移（DDL + 数据迁移），确保表结构和旧数据迁移完成
     await runMigrations();
 
     // 3) 初始化默认数据并启动服务器
-    initializeDefaultUsers(db);
+    initializeDefaultUsers();
   } catch (err) {
     console.error('服务启动失败:', err);
     process.exit(1);
@@ -150,7 +149,7 @@ function updateUserGroupMemberships(userId, groupIds, callback) {
   // 首先删除用户的所有现有组关系
   const deleteQuery = 'DELETE FROM user_group_memberships WHERE user_id = ?';
   
-  db.query(deleteQuery, [userId], (err) => {
+  safeQuery(deleteQuery, [userId], (err) => {
     if (err) {
       return callback(err);
     }
@@ -164,7 +163,7 @@ function updateUserGroupMemberships(userId, groupIds, callback) {
     const insertPromises = groupIds.map(groupId => {
       return new Promise((resolve, reject) => {
         const insertQuery = 'INSERT INTO user_group_memberships (user_id, group_id) VALUES (?, ?)';
-        db.query(insertQuery, [userId, groupId], (err) => {
+        safeQuery(insertQuery, [userId, groupId], (err) => {
           if (err) {
             reject(err);
           } else {
@@ -185,10 +184,10 @@ function updateUserGroupMemberships(userId, groupIds, callback) {
 
 
 // 初始化默认用户
-function initializeDefaultUsers(db) {
+function initializeDefaultUsers() {
   // 检查是否已存在默认用户，如果不存在则创建
   const checkUserQuery = 'SELECT * FROM users WHERE username = ?';
-  db.query(checkUserQuery, ['admin'], async (err, results) => {
+  safeQuery(checkUserQuery, ['admin'], async (err, results) => {
     if (err) {
       console.error('检查默认用户失败:', err);
       return;
@@ -199,7 +198,7 @@ function initializeDefaultUsers(db) {
       const defaultPassword = 'admin123';
       const hashedPassword = await bcrypt.hash(defaultPassword, 10);
       const insertUserQuery = 'INSERT INTO users (username, name, password, role, group_id) VALUES (?, ?, ?, ?, ?)';
-      db.query(insertUserQuery, ['admin', '管理员', hashedPassword, 'admin', null], (err, result) => {
+      safeQuery(insertUserQuery, ['admin', '管理员', hashedPassword, 'admin', null], (err, result) => {
         if (err) {
           console.error('创建默认用户失败:', err);
         } else {
@@ -232,7 +231,7 @@ app.post('/register', (req, res) => {
   
   // 检查用户名是否已存在
   const checkQuery = 'SELECT * FROM users WHERE username = ?';
-  db.query(checkQuery, [username], (err, results) => {
+  safeQuery(checkQuery, [username], (err, results) => {
     if (err) {
       console.error('数据库查询错误:', err);
       return res.status(500).json({ message: '服务器内部错误' });
@@ -245,7 +244,7 @@ app.post('/register', (req, res) => {
     // 检查用户组是否存在（如果提供了groupId）
     if (groupId) {
       const checkGroupQuery = 'SELECT * FROM `groups` WHERE id = ?';
-      db.query(checkGroupQuery, [groupId], (err, groupResults) => {
+      safeQuery(checkGroupQuery, [groupId], (err, groupResults) => {
         if (err) {
           console.error('数据库查询错误:', err);
           return res.status(500).json({ message: '服务器内部错误' });
@@ -263,7 +262,7 @@ app.post('/register', (req, res) => {
         
         // 插入新用户
         const insertQuery = 'INSERT INTO users (username, name, password, role, group_id) VALUES (?, ?, ?, ?, ?)';
-        db.query(insertQuery, [username, name, hashedPassword, userRole, groupId], (err, results) => {
+        safeQuery(insertQuery, [username, name, hashedPassword, userRole, groupId], (err, results) => {
           if (err) {
             console.error('插入用户失败:', err);
             return res.status(500).json({ message: '服务器内部错误' });
@@ -282,7 +281,7 @@ app.post('/register', (req, res) => {
       
       // 插入新用户
       const insertQuery = 'INSERT INTO users (username, name, password, role, group_id) VALUES (?, ?, ?, ?, ?)';
-      db.query(insertQuery, [username, name, hashedPassword, userRole, null], (err, results) => {
+      safeQuery(insertQuery, [username, name, hashedPassword, userRole, null], (err, results) => {
         if (err) {
           console.error('插入用户失败:', err);
           return res.status(500).json({ message: '服务器内部错误' });
@@ -304,7 +303,7 @@ app.post('/login', (req, res) => {
   
   // 查询用户
   const query = 'SELECT * FROM users WHERE username = ?';
-  db.query(query, [username], (err, results) => {
+  safeQuery(query, [username], (err, results) => {
     if (err) {
       console.error('数据库查询错误:', err);
       return res.status(500).json({ message: '服务器内部错误' });
@@ -371,7 +370,7 @@ app.post('/refresh-token', (req, res) => {
     
     // 验证用户是否仍然存在于数据库中，并获取最新的用户信息
     const query = 'SELECT * FROM users WHERE id = ? AND username = ?';
-    db.query(query, [decoded.userId, decoded.username], (err, results) => {
+    safeQuery(query, [decoded.userId, decoded.username], (err, results) => {
       if (err) {
         console.error('数据库查询错误:', err);
         return res.status(500).json({ message: '服务器内部错误' });
@@ -409,7 +408,7 @@ app.post('/refresh-token', (req, res) => {
 // 获取所有用户组API
 app.get('/groups', authenticateToken, (req, res) => {
   const query = 'SELECT id, name, description, leaders FROM `groups`';
-  db.query(query, (err, results) => {
+  safeQuery(query, (err, results) => {
     if (err) {
       console.error('数据库查询错误:', err);
       return res.status(500).json({ message: '服务器内部错误' });
@@ -430,7 +429,7 @@ app.get('/groups/:id', authenticateToken, (req, res) => {
   const groupId = req.params.id;
   const query = 'SELECT id, name, description, leaders FROM \`groups\` WHERE id = ?';
   
-  db.query(query, [groupId], (err, results) => {
+  safeQuery(query, [groupId], (err, results) => {
     if (err) {
       console.error('数据库查询错误:', err);
       return res.status(500).json({ message: '服务器内部错误' });
@@ -453,7 +452,7 @@ app.get('/groups/:id', authenticateToken, (req, res) => {
 // 获取所有用户组API
 app.get('/groups', authenticateToken, (req, res) => {
   const query = 'SELECT * FROM `groups`';
-  db.query(query, (err, results) => {
+  safeQuery(query, (err, results) => {
     if (err) {
       console.error('数据库查询错误:', err);
       return res.status(500).json({ message: '服务器内部错误' });
@@ -518,7 +517,7 @@ app.put('/groups/:id', authenticateToken, (req, res) => {
   updateQuery += updateFields.join(', ') + ' WHERE id = ?';
   updateValues.push(id);
   
-  db.query(updateQuery, updateValues, (err, results) => {
+  safeQuery(updateQuery, updateValues, (err, results) => {
     if (err) {
       console.error('更新用户组失败:', err);
       return res.status(500).json({ message: '服务器内部错误' });
@@ -543,7 +542,7 @@ app.delete('/groups/:id', authenticateToken, (req, res) => {
   
   const query = 'DELETE FROM `groups` WHERE id = ?';
   
-  db.query(query, [id], (err, results) => {
+  safeQuery(query, [id], (err, results) => {
     if (err) {
       console.error('删除用户组失败:', err);
       return res.status(500).json({ message: '服务器内部错误' });
@@ -555,7 +554,7 @@ app.delete('/groups/:id', authenticateToken, (req, res) => {
     
     // 同时更新属于该用户组的用户的group_id为NULL
     const updateUserQuery = 'UPDATE users SET group_id = NULL WHERE group_id = ?';
-    db.query(updateUserQuery, [id], (updateErr) => {
+    safeQuery(updateUserQuery, [id], (updateErr) => {
       if (updateErr) {
         console.error('更新用户group_id失败:', updateErr);
       }
@@ -581,7 +580,7 @@ app.post('/groups', authenticateToken, (req, res) => {
   
   // 插入新用户组
   const query = 'INSERT INTO `groups` (name, description, leaders) VALUES (?, ?, ?)';
-  db.query(query, [name, description || '', leaders ? JSON.stringify(leaders) : '[]'], (err, results) => {
+  safeQuery(query, [name, description || '', leaders ? JSON.stringify(leaders) : '[]'], (err, results) => {
     if (err) {
       console.error('创建用户组失败:', err);
       return res.status(500).json({ message: '服务器内部错误' });
@@ -602,7 +601,7 @@ app.get('/users', authenticateToken, (req, res) => {
     FROM users u
   `;
   
-  db.query(query, (err, users) => {
+  safeQuery(query, (err, users) => {
     if (err) {
       console.error('数据库查询错误:', err);
       return res.status(500).json({ message: '服务器内部错误' });
@@ -618,7 +617,7 @@ app.get('/users', authenticateToken, (req, res) => {
           WHERE ugm.user_id = ?
         `;
         
-        db.query(groupQuery, [user.id], (err, groups) => {
+        safeQuery(groupQuery, [user.id], (err, groups) => {
           if (err) {
             reject(err);
           } else {
@@ -687,7 +686,7 @@ app.put('/users/:id', authenticateToken, (req, res) => {
   updateQuery += updateFields.join(', ') + ' WHERE id = ?';
   updateValues.push(id);
   
-  db.query(updateQuery, updateValues, (err, results) => {
+  safeQuery(updateQuery, updateValues, (err, results) => {
     if (err) {
       console.error('更新用户失败:', err);
       return res.status(500).json({ message: '服务器内部错误' });
@@ -742,7 +741,7 @@ app.delete('/users/:id', authenticateToken, (req, res) => {
   const commaUserId = ',' + userIdStr;
   const commaUserIdWithComma = ',' + userIdStr + ',';
   
-  db.query(removeFromTodosQuery, [
+  safeQuery(removeFromTodosQuery, [
     userIdStr, 
     userIdWithComma + '%', userIdWithComma, '',
     '%' + commaUserIdWithComma + '%', commaUserIdWithComma, ',',
@@ -756,7 +755,7 @@ app.delete('/users/:id', authenticateToken, (req, res) => {
     // 删除用户
     const query = 'DELETE FROM users WHERE id = ?';
     
-    db.query(query, [id], (err, results) => {
+    safeQuery(query, [id], (err, results) => {
       if (err) {
         console.error('删除用户失败:', err);
         return res.status(500).json({ message: '服务器内部错误' });
@@ -783,7 +782,7 @@ function authenticateToken(req, res, next) {
     
     // 验证用户是否仍然存在于数据库中
     const query = 'SELECT * FROM users WHERE id = ? AND username = ?';
-    db.query(query, [decodedUser.userId, decodedUser.username], (err, results) => {
+    safeQuery(query, [decodedUser.userId, decodedUser.username], (err, results) => {
       if (err) {
         console.error('数据库查询错误:', err);
         return res.status(500).json({ message: '服务器内部错误' });
@@ -804,7 +803,7 @@ function authenticateToken(req, res, next) {
         WHERE ugm.user_id = ?
       `;
       
-      db.query(groupQuery, [user.id], (err, groupResults) => {
+      safeQuery(groupQuery, [user.id], (err, groupResults) => {
         if (err) {
           console.error('获取用户组信息失败:', err);
           return res.status(500).json({ message: '服务器内部错误' });
@@ -835,7 +834,7 @@ async function checkTodoPermission(req, res, next) {
   // 查询待办事项的创建者和管理员
   const query = 'SELECT creator_id, administrator_id, Belonging_groups FROM TodosList WHERE id = ?';
   
-  db.query(query, [id], async (err, results) => {
+  safeQuery(query, [id], async (err, results) => {
     if (err) {
       console.error('查询待办事项权限失败:', err);
       return res.status(500).json({ message: '服务器内部错误' });
@@ -854,7 +853,7 @@ async function checkTodoPermission(req, res, next) {
     
     // 检查是否是系统管理员
     const userQuery = 'SELECT role FROM users WHERE id = ?';
-    db.query(userQuery, [userId], (err, userResults) => {
+    safeQuery(userQuery, [userId], (err, userResults) => {
       if (err) {
         console.error('查询用户角色失败:', err);
         return res.status(500).json({ message: '服务器内部错误' });
@@ -875,7 +874,7 @@ async function checkTodoPermission(req, res, next) {
         if (hasGroupAccess) {
           // 如果用户属于关联组，还需要检查是否是组长
           const groupQuery = 'SELECT id, leaders FROM `groups` WHERE id IN (?)';
-          db.query(groupQuery, [todoGroupIds], (err, groupResults) => {
+          safeQuery(groupQuery, [todoGroupIds], (err, groupResults) => {
             if (err) {
               console.error('查询用户组失败:', err);
               return res.status(500).json({ message: '服务器内部错误' });
@@ -950,7 +949,7 @@ app.post('/todos', authenticateToken, (req, res) => {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `;
   
-  db.query(insertQuery, [name, description, formattedDeadline, priority, Status, belongingUsers, belongingGroups, req.user.userId], (err, results) => {
+  safeQuery(insertQuery, [name, description, formattedDeadline, priority, Status, belongingUsers, belongingGroups, req.user.userId], (err, results) => {
     if (err) {
       console.error('创建待办事项失败:', err);
       return res.status(500).json({ message: '服务器内部错误' });
@@ -1002,7 +1001,7 @@ app.get('/todos/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
   const query = 'SELECT * FROM TodosList WHERE id = ?';
   
-  db.query(query, [id], (err, results) => {
+  safeQuery(query, [id], (err, results) => {
     if (err) {
       console.error('获取待办事项详情失败:', err);
       return res.status(500).json({ message: '服务器内部错误' });
@@ -1108,7 +1107,7 @@ app.put('/todos/:id', authenticateToken, checkTodoPermission, (req, res) => {
   updateQuery += updateFields.join(', ') + ' WHERE id = ?';
   updateValues.push(id);
   
-  db.query(updateQuery, updateValues, (err, results) => {
+  safeQuery(updateQuery, updateValues, (err, results) => {
     if (err) {
       console.error('更新待办事项失败:', err);
       return res.status(500).json({ message: '服务器内部错误' });
@@ -1127,7 +1126,7 @@ app.delete('/todos/:id', authenticateToken, checkTodoPermission, (req, res) => {
   const { id } = req.params;
   const query = 'DELETE FROM TodosList WHERE id = ?';
   
-  db.query(query, [id], (err, results) => {
+  safeQuery(query, [id], (err, results) => {
     if (err) {
       console.error('删除待办事项失败:', err);
       return res.status(500).json({ message: '服务器内部错误' });

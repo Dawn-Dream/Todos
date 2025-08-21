@@ -127,6 +127,46 @@ function getConnection() {
 }
 
 /**
+ * 安全的数据库查询函数，自动处理连接断开重连
+ * @param {string} sql - SQL查询语句
+ * @param {Array} params - 查询参数
+ * @param {Function} callback - 回调函数
+ */
+function safeQuery(sql, params, callback) {
+  // 如果只传了两个参数，说明没有params
+  if (typeof params === 'function') {
+    callback = params;
+    params = [];
+  }
+
+  // 检查连接状态
+  if (!db || db.state === 'disconnected') {
+    console.log('数据库连接已断开，尝试重新连接...');
+    return initializeConnection().then(() => {
+      db.query(sql, params, callback);
+    }).catch(err => {
+      console.error('重连失败:', err);
+      callback(err);
+    });
+  }
+
+  // 执行查询，如果失败且是连接错误，尝试重连
+  db.query(sql, params, (err, results) => {
+    if (err && (err.code === 'PROTOCOL_CONNECTION_LOST' || err.code === 'ECONNRESET' || err.fatal)) {
+      console.log('查询时检测到连接断开，尝试重新连接...');
+      initializeConnection().then(() => {
+        db.query(sql, params, callback);
+      }).catch(reconnectErr => {
+        console.error('重连失败:', reconnectErr);
+        callback(err); // 返回原始错误
+      });
+    } else {
+      callback(err, results);
+    }
+  });
+}
+
+/**
  * 关闭数据库连接
  * @returns {Promise<void>}
  */
@@ -169,5 +209,6 @@ module.exports = {
   getConnection,
   closeConnection,
   testConnection,
-  createConnection
+  createConnection,
+  safeQuery
 };
