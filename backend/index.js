@@ -965,7 +965,7 @@ app.post('/todos', authenticateToken, (req, res) => {
 // 获取所有待办事项API
 app.get('/todos', authenticateToken, (req, res) => {
   const query = 'SELECT * FROM TodosList';
-  db.query(query, (err, results) => {
+  safeQuery(query, (err, results) => {
     if (err) {
       console.error('获取待办事项失败:', err);
       return res.status(500).json({ message: '服务器内部错误' });
