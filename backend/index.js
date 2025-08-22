@@ -994,20 +994,17 @@ app.get('/todos', authenticateToken, (req, res) => {
       console.error('获取待办事项失败:', err);
       return res.status(500).json({ message: '服务器内部错误' });
     }
-    
-    // 处理Belonging_users和Belonging_groups字段，将逗号分隔的字符串转换为数组
-    const todos = results.map(todo => ({
+
+    // 当前用户身份
+    const userId = req.user.userId;
+    const userGroupIds = req.user.groupIds || [];
+
+    // 先解析字段，再根据用户/用户组进行服务端过滤，避免返回无权限数据
+    const parsed = results.map(todo => ({
       ...todo,
-      // 确保状态和优先级值被正确处理
       Status: Number(todo.Status),
-      // 将数据库中的整数优先级映射为前端需要的字符串值
       Priority: (() => {
-        const priorityMap = {
-          3: '紧急',
-          2: '重要',
-          1: '普通',
-          0: '低'
-        };
+        const priorityMap = { 3: '紧急', 2: '重要', 1: '普通', 0: '低' };
         return priorityMap[todo.Priority] || '普通';
       })(),
       Belonging_users: todo.Belonging_users ? todo.Belonging_users.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id)) : [],
@@ -1015,7 +1012,14 @@ app.get('/todos', authenticateToken, (req, res) => {
       creator_id: todo.creator_id ? parseInt(todo.creator_id) : null,
       administrator_id: todo.administrator_id ? parseInt(todo.administrator_id) : null
     }));
-    
+
+    const todos = parsed.filter(todo => {
+      if (todo.creator_id === userId || todo.administrator_id === userId) return true;
+      if (Array.isArray(todo.Belonging_users) && todo.Belonging_users.includes(userId)) return true;
+      if (Array.isArray(todo.Belonging_groups) && userGroupIds.length > 0 && todo.Belonging_groups.some(gid => userGroupIds.includes(gid))) return true;
+      return false;
+    });
+
     res.json({ todos });
   });
 });
@@ -1038,16 +1042,9 @@ app.get('/todos/:id', authenticateToken, (req, res) => {
     // 处理Belonging_users和Belonging_groups字段，将逗号分隔的字符串转换为数组
     const todo = {
       ...results[0],
-      // 确保状态和优先级值被正确处理
       Status: Number(results[0].Status),
-      // 将数据库中的整数优先级映射为前端需要的字符串值
       Priority: (() => {
-        const priorityMap = {
-          3: '紧急',
-          2: '重要',
-          1: '普通',
-          0: '低'
-        };
+        const priorityMap = { 3: '紧急', 2: '重要', 1: '普通', 0: '低' };
         return priorityMap[results[0].Priority] || '普通';
       })(),
       Belonging_users: results[0].Belonging_users ? results[0].Belonging_users.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id)) : [],
@@ -1055,6 +1052,18 @@ app.get('/todos/:id', authenticateToken, (req, res) => {
       creator_id: results[0].creator_id ? parseInt(results[0].creator_id) : null,
       administrator_id: results[0].administrator_id ? parseInt(results[0].administrator_id) : null
     };
+
+    // 仅允许创建者、管理员、在Belonging_users中的用户，或属于Belonging_groups的成员查看
+    const userId = req.user.userId;
+    const userGroupIds = req.user.groupIds || [];
+    const canView = (todo.creator_id === userId)
+      || (todo.administrator_id === userId)
+      || (Array.isArray(todo.Belonging_users) && todo.Belonging_users.includes(userId))
+      || (Array.isArray(todo.Belonging_groups) && userGroupIds.length > 0 && todo.Belonging_groups.some(gid => userGroupIds.includes(gid)));
+
+    if (!canView) {
+      return res.status(403).json({ message: '您没有权限查看此待办事项' });
+    }
     
     res.json({ todo });
   });

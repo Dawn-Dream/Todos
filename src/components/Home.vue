@@ -521,19 +521,8 @@ const selectedEditGroups = ref([])
 
 // 挂载时获取用户信息并验证token
 onMounted(async () => {
-  //console.log('认证状态:', authStore.isAuthenticated.value)
-  //console.log('用户信息:', authStore.user.value)
-  //console.log('Token:', authStore.token.value)
-  
-  // 获取用户组名称和组长信息
-  const groupResult = await authStore.fetchGroupName()
-  if (groupResult.success) {
-    // 如果返回了组信息，更新组长信息
-    if (groupResult.group && groupResult.group.leaders) {
-      groupLeaders.value = groupResult.group.leaders
-          }
-    // 如果没有组信息，但获取成功，说明用户没有分配到组，保持默认值
-  }
+  // 获取多用户组信息，替换旧的单组名获取逻辑，避免首次加载错误
+  await authStore.fetchUserGroups()
   
   // 获取所有用户和组数据
   await fetchAllUsers()
