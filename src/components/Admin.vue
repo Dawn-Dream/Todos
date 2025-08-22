@@ -822,7 +822,7 @@ const submitNewUser = async () => {
       await fetchUsers();
       
       // 刷新token以获取最新的用户信息
-      await authStore.fetchGroupName()
+      await authStore.fetchUserGroups()
     } else {
       alert('添加失败: ' + response.data.message)
     }
@@ -854,7 +854,7 @@ const submitNewGroup = async () => {
       isAddGroupModalVisible.value = false
       newGroupLeaders.value = [] // Reset leaders selection
       // 刷新token以获取最新的用户组信息
-      await authStore.fetchGroupName()
+      await authStore.fetchUserGroups()
       alert('用户组添加成功')
       fetchGroups() // 刷新用户组列表
     } else {
@@ -907,7 +907,7 @@ const submitEditUser = async () => {
       await fetchUsers();
       
       // 刷新token以获取最新的用户信息
-      await authStore.fetchGroupName()
+      await authStore.fetchUserGroups()
     } else {
       alert('更新失败: ' + response.data.message)
     }
@@ -939,7 +939,7 @@ const submitEditGroup = async () => {
       isEditGroupModalVisible.value = false
       alert('用户组更新成功')
       // 刷新token以获取最新的用户组信息
-      await authStore.fetchGroupName()
+      await authStore.fetchUserGroups()
       fetchGroups() // 刷新用户组列表
     } else {
       alert('更新用户组失败')
@@ -994,7 +994,7 @@ const deleteUser = async (userId) => {
       await fetchUsers();
       
       // 刷新token以获取最新的用户信息
-      await authStore.fetchGroupName()
+      await authStore.fetchUserGroups()
     } else {
       alert('删除失败: ' + response.data.message)
     }
@@ -1016,7 +1016,7 @@ const deleteGroup = async (groupId) => {
     if (response.status === 200) {
       alert('用户组删除成功');
       // 刷新token以获取最新的用户组信息
-      await authStore.fetchGroupName();
+      await authStore.fetchUserGroups();
       // 刷新用户列表以更新用户的groupId
       await fetchUsers();
       fetchGroups(); // 刷新用户组列表
@@ -1262,10 +1262,16 @@ const fetchAllUsersAndGroups = async () => {
     })
     allGroups.value = groupsResponse.data.groups || []
     
-    // 获取当前用户的组信息和组长信息
-    const groupResult = await authStore.fetchGroupName()
-    if (groupResult.success && groupResult.group && groupResult.group.leaders) {
-      groupLeaders.value = groupResult.group.leaders
+    // 获取当前用户的组信息和组长信息（多用户组）
+    const ugResult = await authStore.fetchUserGroups()
+    if (ugResult.success && Array.isArray(ugResult.groups)) {
+      const leadersSet = new Set()
+      ugResult.groups.forEach(g => {
+        if (Array.isArray(g.leaders)) {
+          g.leaders.forEach(id => leadersSet.add(id))
+        }
+      })
+      groupLeaders.value = Array.from(leadersSet)
     }
   } catch (error) {
     console.error('获取用户和组数据失败:', error)
@@ -1278,7 +1284,7 @@ onMounted(async () => {
     fetchGroups(),
     fetchTodos(),
     fetchAllUsersAndGroups(),
-    authStore.fetchGroupName()
+    authStore.fetchUserGroups()
   ])
 })
 </script>
