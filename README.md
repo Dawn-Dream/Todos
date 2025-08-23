@@ -1,367 +1,236 @@
-# ToDos - 小组任务管理系统
+# ToDos - 小组任务管理系统（完整说明）
 
-一个基于 Vue 3 + Node.js + MySQL 的现代化任务管理系统，支持多用户协作、用户组管理和权限控制。
+一个基于 Vue 3 + Vite + Node.js + Express + MySQL 的现代化任务管理系统，支持多用户、多用户组、精细化权限与任务详情（Markdown）。
 
-## ✨ 功能特性
-
-### 🔐 用户认证与权限
-- **用户注册/登录**：支持用户注册、登录和JWT令牌认证
-- **角色权限**：区分管理员和普通用户权限
-- **令牌刷新**：自动刷新过期令牌，保持用户会话
-
-### 👥 用户组管理
-- **多用户组归属**：用户可以同时属于多个用户组
-- **组长管理**：支持设置多个组长管理用户组
-- **成员管理**：添加/移除用户组成员
-- **权限继承**：基于用户组的任务访问权限
-
-### 📋 任务管理
-- **任务CRUD**：创建、查看、编辑、删除任务
-- **任务属性**：
-  - 优先级设置（低/中/高）
-  - 状态管理（计划中/进行中/已完成/已取消）
-  - 截止日期设置
-  - 任务描述和详情
-- **任务分配**：支持分配给特定用户或用户组
-- **任务详情**：支持Markdown格式的详细描述
-
-### 🛠️ 管理功能
-- **用户管理**：管理员可以管理所有用户信息
-- **用户组管理**：创建、编辑、删除用户组
-- **权限控制**：基于角色和用户组的访问控制
-- **数据统计**：任务完成情况统计
-
-### 🎨 用户体验
-- **响应式设计**：适配桌面端和移动端
-- **现代化UI**：基于Tailwind CSS的美观界面
-- **实时更新**：动态数据更新和状态同步
-- **友好交互**：直观的操作流程和反馈
-
-## 🛠️ 技术栈
-
-### 前端
-- **Vue 3**：现代化的渐进式JavaScript框架
-- **Vue Router 4**：官方路由管理器
-- **Axios**：HTTP客户端库
-- **Tailwind CSS**：实用优先的CSS框架
-- **DaisyUI**：Tailwind CSS组件库
-- **Marked**：Markdown解析器
-- **Vite**：快速的前端构建工具
-
-### 后端
-- **Node.js**：JavaScript运行时环境
-- **Express.js**：Web应用框架
-- **MySQL 8.0**：关系型数据库
-- **JWT**：JSON Web Token认证
-- **bcryptjs**：密码加密库
-- **CORS**：跨域资源共享
-- **数据库迁移系统**：版本控制的数据库架构管理
-- **并发锁机制**：MySQL命名锁防止迁移冲突
-
-### 部署
-- **Docker**：容器化部署
-- **Docker Compose**：多容器编排
-- **Nginx**：反向代理和静态文件服务
-
-## 📁 项目结构
-
-```
-Todos/
-├── .env.example         # 环境变量示例文件
-├── .github/             # GitHub Actions工作流
-│   └── workflows/
-│       └── docker-publish.yml
-├── README.md            # 项目说明文档
-├── docker-compose.yml   # Docker Compose配置
-├── frontend.Dockerfile  # 前端Docker镜像构建文件
-├── backend.Dockerfile   # 后端Docker镜像构建文件
-├── package.json         # 前端依赖配置
-├── vite.config.js       # Vite构建配置
-├── tailwind.config.js   # Tailwind CSS配置
-├── src/                 # 前端源码
-│   ├── App.vue          # 根组件
-│   ├── main.js          # 应用入口
-│   ├── api.js           # API接口封装
-│   ├── config.js        # 配置文件
-│   ├── main.css         # 主样式文件
-│   ├── components/      # Vue组件
-│   │   ├── Login.vue    # 登录页面
-│   │   ├── Register.vue # 注册页面
-│   │   ├── Home.vue     # 主页面
-│   │   ├── Admin.vue    # 管理后台
-│   │   └── TaskDetail.vue # 任务详情
-│   └── store/           # 状态管理
-│       └── auth.js      # 认证状态管理
-├── backend/             # 后端源码
-│   ├── index.js         # 主服务文件
-│   ├── package.json     # 后端依赖配置
-│   ├── database/        # 数据库模块
-│   │   ├── connection.js    # 数据库连接管理
-│   │   ├── schema.js        # 表结构定义
-│   │   └── migration.js     # 迁移系统
-│   └── todo-details/    # 任务详情存储目录
-└── public/              # 静态资源
-    └── favicon.ico      # 网站图标
-```
-
-## 🚀 快速开始
-
-### 使用Docker部署（推荐）
-
-1. **克隆项目**
-   ```bash
-   git clone <repository-url>
-   cd Todos
-   ```
-
-2. **配置环境变量**
-   ```bash
-   cp .env.example .env
-   # 编辑 .env 文件，设置数据库密码和JWT密钥
-   ```
-
-3. **启动服务**
-   ```bash
-   docker-compose up -d
-   ```
-
-4. **访问应用**
-   - 前端：http://localhost:10001
-   - 后端API：http://localhost:10002
-
-### 本地开发
-
-#### 前端开发
-```bash
-# 安装依赖
-npm install
-
-# 启动开发服务器
-npm run dev
-
-# 构建生产版本
-npm run build
-
-# 启动tailwindcss watch
-npm run tailwind:watch
-```
-
-
-
-#### 后端开发
-```bash
-cd backend
-
-# 安装依赖
-npm install
-
-# 配置环境变量（复制并编辑 .env 文件）
-# 设置数据库连接信息：DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
-
-# 启动开发服务器（自动执行数据库迁移）
-npm run dev
-
-# 启动生产服务器
-npm start
-```
-
-#### 数据库迁移验证
-
-首次启动后端服务时，可以通过以下方式验证迁移系统：
-
-```sql
--- 检查迁移记录
-SELECT * FROM schema_migrations ORDER BY version;
-
--- 验证表结构
-SHOW TABLES;
-DESCRIBE user_group_memberships;
-```
-
-预期日志输出：
-```
-创建 schema_migrations 表 成功或已存在
-开始执行迁移 v1 (initial_schema)...
-迁移 v1 (initial_schema) 执行完成
-开始执行迁移 v2 (migrate_user_group_memberships)...
-迁移 v2 (migrate_user_group_memberships) 执行完成
-所有迁移已应用
-```
-
-## ⚙️ 环境变量配置
-
-创建 `.env` 文件并配置以下变量：
-
-```env
-# 数据库配置（Docker部署）
-MYSQL_ROOT_PASSWORD=your_super_secret_db_password
-
-# 数据库连接配置（本地开发）
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=your_database_password
-DB_NAME=todos_db
-
-# JWT配置
-JWT_SECRET=your_super_secret_jwt_key
-
-# 服务端口（可选）
-PORT=3000
-```
-
-### 环境变量说明
-
-#### Docker部署
-- `MYSQL_ROOT_PASSWORD`：MySQL数据库root用户密码
-- `JWT_SECRET`：JWT令牌签名密钥，建议使用长随机字符串
-
-#### 本地开发
-- `DB_HOST`：数据库主机地址（默认：localhost）
-- `DB_PORT`：数据库端口（默认：3306）
-- `DB_USER`：数据库用户名（默认：root）
-- `DB_PASSWORD`：数据库密码
-- `DB_NAME`：数据库名称（默认：todos_db）
-- `JWT_SECRET`：JWT令牌签名密钥
-- `PORT`：后端服务端口（默认：3000）
-
-> **注意**：首次运行时，系统会自动创建指定的数据库（如果不存在），并执行所有必要的迁移。
-
-## 🗄️ 数据库设计
-
-### 核心表结构
-
-- **users**：用户信息表
-- **groups**：用户组信息表
-- **user_group_memberships**：用户-用户组关系表（支持多对多关系）
-- **TodosList**：任务信息表
-- **schema_migrations**：数据库迁移版本记录表
-
-### 数据库迁移系统
-
-项目采用版本化的数据库迁移系统，具有以下特性：
-
-- **版本控制**：每个迁移都有唯一的版本号和名称
-- **幂等执行**：重复运行迁移不会产生副作用
-- **并发安全**：使用MySQL命名锁防止多实例同时执行迁移
-- **自动化**：服务启动时自动检查并执行未应用的迁移
-
-#### 迁移版本历史
-
-- **v1 (initial_schema)**：创建基础表结构（groups、users、user_group_memberships、TodosList）
-- **v2 (migrate_user_group_memberships)**：迁移历史用户组关系数据
-
-#### 迁移执行流程
-
-1. 服务启动时连接数据库
-2. 创建或检查 `schema_migrations` 表
-3. 获取迁移锁（防止并发执行）
-4. 检查已应用的迁移版本
-5. 按顺序执行未应用的迁移
-6. 记录迁移执行状态
-7. 释放迁移锁
-
-### 任务状态说明
-
-- **-1**：计划中
-- **0**：进行中
-- **1**：已完成
-- **2**：已取消
-
-### 优先级说明
-
-- **0**：低优先级
-- **1**：中优先级
-- **2**：高优先级
-
-## 🔧 API接口
-
-### 认证接口
-- `POST /register` - 用户注册
-- `POST /login` - 用户登录
-- `POST /refresh-token` - 刷新令牌
-
-### 用户管理
-- `GET /users` - 获取用户列表
-- `PUT /users/:id` - 更新用户信息
-- `DELETE /users/:id` - 删除用户
-
-### 用户组管理
-- `GET /groups` - 获取用户组列表
-- `GET /groups/:id` - 获取用户组详情
-- `POST /groups` - 创建用户组
-- `PUT /groups/:id` - 更新用户组
-- `DELETE /groups/:id` - 删除用户组
-- `POST /users/:userId/groups/:groupId` - 添加用户到组
-- `DELETE /users/:userId/groups/:groupId` - 从组中移除用户
-- `GET /groups/:groupId/members` - 获取组成员列表
-
-### 任务管理
-- `GET /todos` - 获取任务列表
-- `GET /todos/:id` - 获取任务详情
-- `POST /todos` - 创建任务
-- `PUT /todos/:id` - 更新任务
-- `DELETE /todos/:id` - 删除任务
-
-### 任务详情
-- `GET /todo-details/:id/exists` - 检查任务详情是否存在
-- `POST /todo-details/:id` - 保存任务详情
-- `GET /todo-details/:id` - 获取任务详情
-- `DELETE /todo-details/:id` - 删除任务详情
-
-## 🔒 权限说明
-
-### 角色权限
-- **管理员（admin）**：拥有所有权限，可以管理用户、用户组和所有任务
-- **普通用户（user）**：只能管理自己的任务和所属用户组的任务
-
-### 任务访问权限
-- 任务创建者可以编辑和删除自己的任务
-- 用户组成员可以查看组内任务
-- 管理员可以访问所有任务
-
-## 🐳 Docker部署说明
-
-项目支持完整的Docker容器化部署：
-
-- **frontend**：前端服务容器（端口10001）
-- **backend**：后端API服务容器（端口10002）
-- **database**：MySQL数据库容器
-
-所有服务通过Docker网络互联，数据持久化存储在Docker卷中。
-
-## 📝 开发说明
-
-### 代码规范
-- 前端使用Vue 3 Composition API
-- 后端使用Express.js RESTful API设计
-- 数据库使用MySQL 8.0
-- 所有密码使用bcrypt加密存储
-- JWT令牌用于用户认证和授权
-- 数据库操作模块化，分离连接管理、架构定义和迁移逻辑
-- 采用版本化数据库迁移，确保部署一致性
-
-### 安全特性
-- 密码加密存储
-- JWT令牌认证
-- CORS跨域保护
-- SQL注入防护
-- XSS攻击防护
-
-## 📄 许可证
-
-本项目采用开源许可证，详见 [LICENSE](LICENSE) 文件。
-
-## 🤝 贡献
-
-欢迎提交Issue和Pull Request来改进项目！
-
-## 📞 支持
-
-如有问题或建议，请通过以下方式联系：
-- 提交GitHub Issue
-- 发送邮件至项目维护者
+本 README 覆盖：功能特性、架构与目录、环境变量、启动与部署、API 列表、权限模型、数据库迁移、常见问题等，确保你能快速、稳定地运行与二次开发。
 
 ---
 
-**ToDos** - 让任务管理更简单高效！
+## 功能总览
+
+- 认证与会话
+  - 用户注册/登录，JWT 认证与自动刷新
+  - 本地持久化 token（localStorage），前端拦截器自动带上 Authorization: Bearer <token>
+- 用户与用户组
+  - 用户可同时属于多个用户组（多对多）
+  - 组长（leaders）与成员（members）管理
+- 任务管理（Todos）
+  - 创建/查看/编辑/删除任务，支持优先级、状态、截止时间、分配到用户或用户组
+  - 任务详情 Markdown 存储到后端文件系统
+- 访问控制（核心）
+  - 服务器端对 GET /todos 与 GET /todos/:id 做严格权限过滤
+  - 只有创建者/管理员/属于任务 Belonging_users 或与任务 Belonging_groups 相交的成员可见
+  - 编辑/删除继续由后端权限中间件校验
+- 部署与维护
+  - Docker Compose 一键三件套（前端/后端/数据库）
+  - 后端启动自动建库、自动迁移（带并发锁），数据库持续演进
+
+---
+
+## 技术栈
+
+- 前端：Vue 3、Vue Router、Axios、Tailwind CSS、DaisyUI、Marked、Vite
+- 后端：Node.js、Express、JWT、bcryptjs、mysql2
+- 数据库：MySQL 8.0
+- 部署：Docker / Docker Compose（生产镜像已提供）
+
+---
+
+## 项目结构
+
+```
+Todos/
+├── docker-compose.yml          # Docker 一键部署
+├── frontend.Dockerfile         # 前端镜像
+├── backend.Dockerfile          # 后端镜像
+├── .env.example                # Docker 部署需要的环境变量示例
+├── src/                        # 前端源码
+│   ├── components/             # 视图组件（Home / Admin / TaskDetail / Login / Register）
+│   ├── store/auth.js           # 认证与多组支持（token/刷新/组名/组列表）
+│   ├── api.js                  # Axios 封装（自动带 token、401 自动刷新）
+│   └── config.js               # API_BASE_URL = '/api'（通过反向代理访问后端）
+├── backend/
+│   ├── index.js                # Express 入口（鉴权、路由、权限校验、详情文件读写）
+│   └── database/               # 数据库连接与迁移
+│       ├── connection.js       # 自动创建库、重试、断线重连、安全查询
+│       ├── schema.js           # 表结构 DDL
+│       └── migration.js        # 版本迁移与并发锁
+└── README.md
+```
+
+---
+
+## 环境变量
+
+创建 .env（Docker 部署在项目根目录；本地后端可在 backend/.env）并配置：
+
+```
+# Docker 部署必填
+MYSQL_ROOT_PASSWORD=强随机密码
+JWT_SECRET=强随机JWT密钥
+
+# 本地后端（backend/.env）可用（如不使用 Docker）
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=你的数据库密码
+DB_NAME=todos_db
+PORT=3000
+```
+
+说明：
+- 后端启动将自动创建 DB_NAME 指定的数据库（若不存在），并执行所有未应用的迁移。
+- 生产环境务必使用强随机的 JWT_SECRET 与数据库密码，不要提交到版本库。
+
+---
+
+## 启动与部署
+
+### 方式一：Docker 一键启动（推荐）
+
+1) 准备环境变量
+```
+cp .env.example .env
+# 编辑 .env，设置 MYSQL_ROOT_PASSWORD 与 JWT_SECRET
+```
+
+2) 启动
+```
+docker-compose up -d
+```
+
+3) 访问
+- 前端：http://localhost:10001
+- 后端（直连）：http://localhost:10002
+
+> 说明：前端镜像内置 Nginx 将 /api 反向代理到后端，无需改动前端代码。
+
+### 方式二：本地开发（独立运行前后端）
+
+- 启动数据库（自行安装 MySQL 8.0），创建用户/密码
+- 后端
+```
+cd backend
+npm install
+# backend/.env 内设置 DB_ 系列变量与 JWT_SECRET
+npm run dev
+```
+- 前端
+```
+npm install
+# 开发环境下，Vite 未设置 /api 代理。
+# 临时方案 A：将 src/config.js 的 API_BASE_URL 改成 'http://localhost:3000'
+# 临时方案 B：自行在 Vite 配置 server.proxy 将 /api 指向 http://localhost:3000
+npm run dev
+```
+
+---
+
+## 权限与安全
+
+- 登录成功后，前端把 token 与过期时间写入 localStorage；请求自动带 Authorization: Bearer <token>
+- 401 将自动尝试调用 POST /refresh-token 刷新 token；失败会强制登出
+- 列表与详情接口服务器端强制过滤：
+  - GET /todos 仅返回：创建者/管理员/Belonging_users 含当前用户/Belonging_groups 与用户任一所属组相交的任务
+  - GET /todos/:id 若无权限返回 403
+- 编辑/删除接口继续通过权限中间件校验（创建者/管理员/组长/关联成员等）
+
+---
+
+## 数据库与迁移
+
+- 表：users、groups、user_group_memberships（多对多）、TodosList、schema_migrations
+- 启动流程：
+  1. 自动创建数据库（若不存在）
+  2. 获取迁移锁（MySQL 命名锁）避免并发迁移
+  3. 执行未应用的版本迁移并记录
+- 已包含迁移：
+  - v1: 初始表结构（users/groups/user_group_memberships/TodosList）
+  - v2: 兼容历史 group_id 到关系表的迁移
+
+> 提醒：如需修改数据库结构，务必编写新的迁移版本（backend/database/migration.js），并在发布前做好备份与回滚方案。
+
+---
+
+## API 速览
+
+- 认证
+  - POST /register
+  - POST /login
+  - POST /refresh-token
+- 用户
+  - GET /users
+  - PUT /users/:id
+  - DELETE /users/:id
+  - GET /user/groups            # 当前登录用户所属的所有用户组
+- 用户组
+  - GET /groups
+  - GET /groups/:id
+  - POST /groups
+  - PUT /groups/:id
+  - DELETE /groups/:id
+  - POST /users/:userId/groups/:groupId
+  - DELETE /users/:userId/groups/:groupId
+  - GET /groups/:groupId/members
+- 任务（Todos）
+  - GET /todos                  # 服务器端已做权限过滤
+  - GET /todos/:id              # 服务器端鉴权，无权访问 403
+  - POST /todos
+  - PUT /todos/:id
+  - DELETE /todos/:id
+- 任务详情（Markdown）
+  - GET /todo-details/:id/exists
+  - POST /todo-details/:id
+  - GET /todo-details/:id
+  - DELETE /todo-details/:id
+
+字段约定：
+- Status: -1=计划中, 0=进行中, 1=已完成, 2=已取消
+- Priority: '低' | '普通' | '重要' | '紧急'
+
+---
+
+## 前端开发要点
+
+- 入口 <src/main.js>，页面在 <src/components/>
+- Axios 实例在 <src/api.js>：自动加 token + 401 自动刷新
+- 认证与多组状态在 <src/store/auth.js>：
+  - localStorage token 持久化
+  - refreshToken 与 fetchUserGroups
+- API_BASE_URL 在 <src/config.js>，默认 '/api'（需由反向代理映射到后端）
+
+---
+
+## 任务详情存储
+
+- 后端把每个任务详情保存为 Markdown 文件（在容器中挂载卷：todo_details）
+- Docker Compose 已将目录持久化到卷，升级/重启不丢失
+
+---
+
+## 常见问题
+
+1) 前端本地开发请求失败 404/网络错误？
+- 因为 API_BASE_URL='/api' 需要本地反向代理
+- 方案 A：临时将 src/config.js 改为 'http://localhost:3000'
+- 方案 B：在 Vite 设置 server.proxy（推荐团队配置）
+
+2) 登录后仍看见其他组的任务？
+- 现在 GET /todos 在后端已严格过滤；若仍出现，请检查你的账号是否为管理员/创建者，或任务是否确实关联了你所在组
+
+3) 首次运行数据库连不上？
+- 后端已带重试，确认 DB_HOST/PORT/USER/PASSWORD/DB_NAME 与实例一致，确认数据库服务已启动
+
+4) 如何成为管理员？
+- 通过管理员账号在“用户管理”中升级，或调用 PUT /users/:id 设置 role=admin（初始管理员需要运维侧在数据库中设定）
+
+---
+
+## 许可证与贡献
+
+- 许可证：详见 LICENSE
+- 欢迎提交 Issue / PR 改进项目
+
+—
+
+让团队协作与任务管理更简单！
