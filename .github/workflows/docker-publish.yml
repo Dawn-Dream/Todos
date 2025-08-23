@@ -25,25 +25,6 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push frontend image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./frontend.Dockerfile
-          push: true
-          tags: lycohana/todos-frontend:latest
-
-      - name: Build and push backend image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./backend.Dockerfile
-          push: true
-          tags: |
-            ${{ steps.semver.outputs.version }}
-            latest
-
-      # ===== Version bump, changelog generation, commit and release =====
       - name: Bump version and create tag
         id: tag_version
         uses: mathieudutour/github-tag-action@v6.1
@@ -52,6 +33,26 @@ jobs:
           release_branches: main
           default_bump: patch
           tag_prefix: v
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./frontend.Dockerfile
+          push: true
+          tags: |
+            lycohana/todos-frontend:latest
+            ${{ steps.tag_version.outputs.new_tag && format('lycohana/todos-frontend:{0}', steps.tag_version.outputs.new_tag) }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./backend.Dockerfile
+          push: true
+          tags: |
+            lycohana/todos-backend:latest
+            ${{ steps.tag_version.outputs.new_tag && format('lycohana/todos-backend:{0}', steps.tag_version.outputs.new_tag) }}
 
       - name: Generate Changelog for new tag
         if: steps.tag_version.outputs.new_tag != ''
