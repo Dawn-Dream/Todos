@@ -44,10 +44,8 @@ jobs:
           FE_TAGS="lycohana/todos-frontend:latest"
           BE_TAGS="lycohana/todos-backend:latest"
           if [ -n "${{ steps.tag_version.outputs.new_tag }}" ]; then
-            FE_TAGS="$FE_TAGS
-lycohana/todos-frontend:${{ steps.tag_version.outputs.new_tag }}"
-            BE_TAGS="$BE_TAGS
-lycohana/todos-backend:${{ steps.tag_version.outputs.new_tag }}"
+            FE_TAGS="$FE_TAGS\nlycohana/todos-frontend:${{ steps.tag_version.outputs.new_tag }}"
+            BE_TAGS="$BE_TAGS\nlycohana/todos-backend:${{ steps.tag_version.outputs.new_tag }}"
           fi
           echo "TAGS_FE<<EOF" >> $GITHUB_ENV
           echo "$FE_TAGS" >> $GITHUB_ENV
