@@ -34,15 +34,35 @@ jobs:
           default_bump: patch
           tag_prefix: v
 
+      - name: Configure git safe directory
+        if: steps.tag_version.outputs.new_tag != ''
+        run: git config --global --add safe.directory $GITHUB_WORKSPACE
+
+      - name: Prepare image tags
+        id: prepare_tags
+        run: |
+          FE_TAGS="lycohana/todos-frontend:latest"
+          BE_TAGS="lycohana/todos-backend:latest"
+          if [ -n "${{ steps.tag_version.outputs.new_tag }}" ]; then
+            FE_TAGS="$FE_TAGS
+lycohana/todos-frontend:${{ steps.tag_version.outputs.new_tag }}"
+            BE_TAGS="$BE_TAGS
+lycohana/todos-backend:${{ steps.tag_version.outputs.new_tag }}"
+          fi
+          echo "TAGS_FE<<EOF" >> $GITHUB_ENV
+          echo "$FE_TAGS" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+          echo "TAGS_BE<<EOF" >> $GITHUB_ENV
+          echo "$BE_TAGS" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
       - name: Build and push frontend image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./frontend.Dockerfile
           push: true
-          tags: |
-            lycohana/todos-frontend:latest
-            ${{ steps.tag_version.outputs.new_tag && format('lycohana/todos-frontend:{0}', steps.tag_version.outputs.new_tag) }}
+          tags: ${{ env.TAGS_FE }}
 
       - name: Build and push backend image
         uses: docker/build-push-action@v5
@@ -50,21 +70,32 @@ jobs:
           context: .
           file: ./backend.Dockerfile
           push: true
-          tags: |
-            lycohana/todos-backend:latest
-            ${{ steps.tag_version.outputs.new_tag && format('lycohana/todos-backend:{0}', steps.tag_version.outputs.new_tag) }}
+          tags: ${{ env.TAGS_BE }}
+
+      - name: Prepare global git config for Docker actions
+        run: |
+          printf "[safe]\n\tdirectory = /github/workspace\n" > $GITHUB_WORKSPACE/.gitconfig
 
       - name: Generate Changelog for new tag
-        if: steps.tag_version.outputs.new_tag != ''
+        if: steps.tag_version.outputs.new_tag != '' && steps.tag_version.outputs.previous_tag != ''
         uses: scottbrenner/generate-changelog-action@master
+        continue-on-error: true
+        env:
+          GIT_CONFIG_GLOBAL: /github/workspace/.gitconfig
         with:
-          repo: ${{ github.repository }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-          futureRelease: ${{ steps.tag_version.outputs.new_tag }}
-          output: CHANGELOG.md
-          issues: true
-          pullRequests: true
-          compareLink: true
+          from-tag: ${{ steps.tag_version.outputs.previous_tag }}
+          to-tag: ${{ steps.tag_version.outputs.new_tag }}
+
+      - name: Fallback create CHANGELOG.md if missing
+        if: steps.tag_version.outputs.new_tag != ''
+        run: |
+          if [ ! -f CHANGELOG.md ]; then
+            echo "# Changelog" > CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "## ${{ steps.tag_version.outputs.new_tag }}" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "${{ steps.tag_version.outputs.changelog }}" >> CHANGELOG.md
+          fi
 
       - name: Commit CHANGELOG.md back to repository
         if: steps.tag_version.outputs.new_tag != ''
@@ -76,12 +107,10 @@ jobs:
 
       - name: Create GitHub Release
         if: steps.tag_version.outputs.new_tag != ''
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: ncipollo/release-action@v1
         with:
-          tag_name: ${{ steps.tag_version.outputs.new_tag }}
-          release_name: ${{ steps.tag_version.outputs.new_tag }}
-          body_path: CHANGELOG.md
+          tag: ${{ steps.tag_version.outputs.new_tag }}
+          name: ${{ steps.tag_version.outputs.new_tag }}
+          bodyFile: CHANGELOG.md
           draft: false
           prerelease: false
