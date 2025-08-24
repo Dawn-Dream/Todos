@@ -10,6 +10,7 @@ services:
 
   backend:
     image: lycohana/todos-backend:latest
+    command: ["node", "backend/index.js"]
     environment:
       - NODE_ENV=production
       - DB_HOST=database

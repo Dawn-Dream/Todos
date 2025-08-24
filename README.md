@@ -95,11 +95,21 @@ npx web-push generate-vapid-keys
 2. 或者使用在线工具生成：https://web-push-codelab.glitch.me/
 
 ## 部署注意事项
-1. 确保这些配置已正确应用到：
-   - 本地开发环境（`.env`文件）
-   - Docker环境（`docker-compose.yml`或环境变量）
-   - 生产部署环境
-2. `VAPID_PRIVATE_KEY`是敏感信息，请妥善保管。
+ 1. 确保这些配置已正确应用到：
+    - 本地开发环境（`.env`文件）
+    - Docker环境（`docker-compose.yml`或环境变量）
+    - 生产部署环境
+ 2. `VAPID_PRIVATE_KEY`是敏感信息，请妥善保管。
+ 3. Docker 后端启动若出现 `Cannot find module 'dotenv/config'`，请按以下两种方式之一修复：
+     - 若自行构建镜像：确认 backend.Dockerfile 的启动命令为：
+       ```Dockerfile
+       CMD ["node", "backend/index.js"]
+       ```
+     - 若使用预构建镜像（docker-compose 中使用 image 字段）：在 `docker-compose.yml` 的 backend 服务下添加命令覆盖：
+       ```yaml
+       command: ["node", "backend/index.js"]
+       ```
+     本项目的 `backend/index.js` 已包含 `require('dotenv').config()`，无需通过 `-r dotenv/config` 预加载。
 
 # 本地后端（backend/.env）可用（如不使用 Docker）
 DB_HOST=localhost

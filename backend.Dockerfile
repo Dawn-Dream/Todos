@@ -5,4 +5,4 @@ COPY .env.example ./.env.example
 RUN npm install --prefix backend --omit=dev
 COPY backend/ ./backend/
 EXPOSE 3000
-CMD ["node", "-r", "dotenv/config", "backend/index.js"]
+CMD ["node", "backend/index.js"]
