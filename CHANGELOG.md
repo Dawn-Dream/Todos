@@ -1,17 +1,17 @@
 # Changelog
 
-## v0.0.4
+## v0.1.0
 
-### [0.0.4](https://github.com/Dawn-Dream/Todos/compare/v0.0.3...v0.0.4) (2025-08-23)
+## [0.1.0](https://github.com/Dawn-Dream/Todos/compare/v0.0.4...v0.1.0) (2025-08-24)
 
 
-### Bug Fixes
+### Features
 
-* **Home:** 修复添加任务模态框的滚动和定位问题 ([8c0c768](https://github.com/Dawn-Dream/Todos/commit/8c0c7682fc2ace7d0fc578d1c2c85b167593aa53))
+* **PWA:** 添加渐进式Web应用支持包括Service Worker和推送通知 ([aa457eb](https://github.com/Dawn-Dream/Todos/commit/aa457ebf9501ed6ef1fad2907dfc9e6be0c0fda6))
 
 
 ### Documentation
 
-* **changelog:** update for v0.0.3 [skip ci] ([e713cee](https://github.com/Dawn-Dream/Todos/commit/e713cee7d58f37924c36af18c269d8b0817982be))
+* **changelog:** update for v0.0.4 [skip ci] ([cb7fa5d](https://github.com/Dawn-Dream/Todos/commit/cb7fa5d389a4607e5c5b3fd12fcb79a53766e290))
 
 
