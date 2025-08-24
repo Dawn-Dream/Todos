@@ -2,12 +2,21 @@
   <div class="min-h-screen bg-gray-50">
     <nav class="fixed top-0 left-0 right-0 z-50 flex items-center px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 justify-between">
       <div class="flex items-center">
-        <a class="transition-all duration-500 text-2xl font-bold text-white md:hover:text-gray-300" href="/home">ToDos</a>
+        <a class="transition-all duration-500 text-2xl font-bold text-white hover:text-gray-300" href="/home">ToDos</a>
       </div>
       
       <div class="flex items-center space-x-4">
-        <div class="relative" ref="userMenu">
-          <div class="flex items-center space-x-2 cursor-pointer text-white py-1 px-3 rounded-lg transition-all duration-300 bg-indigo-600 md:hover:bg-indigo-700" @click="toggleUserMenu">
+        <div class="relative group" ref="userMenuRef">
+          <div 
+            class="flex items-center space-x-2 cursor-pointer text-white py-1 px-3 rounded-lg transition-all duration-300 bg-indigo-600 hover:bg-indigo-700"
+            @click="toggleUserMenu"
+            @keydown.enter.prevent="toggleUserMenu"
+            @keydown.space.prevent="toggleUserMenu"
+            role="button"
+            tabindex="0"
+            :aria-expanded="isUserMenuOpen.toString()"
+            aria-haspopup="menu"
+          >
             <div class="flex flex-col items-start">
               <span class="font-medium text-1xl">{{ user.name || 'Guest' }}</span>
               <span class="text-xs text-indigo-200 flex items-center">
@@ -34,19 +43,22 @@
               <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
             </svg>
           </div>
-          <div :class="{'opacity-100 visible': showUserMenu, 'opacity-0 invisible': !showUserMenu}" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 transition-all duration-300 z-20">
-            <a href="#" class="block px-4 py-2 text-sm text-gray-500 hover:bg-gray-100">个人信息 </a>
-            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">系统设置 未实现</a>
-            <a v-if="user && user.role === 'admin'" href="/admin" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">后台管理</a>
-            <button @click="forceLogout" class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200">
-              <span class="flex items-center text-red-600 font-medium">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                登出
-              </span>
-            </button>
-          </div>
+          <div 
+            class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 transition-all duration-300 z-20 opacity-0 invisible group-hover:opacity-100 group-hover:visible"
+            :class="isUserMenuOpen ? 'opacity-100 visible' : ''"
+          >
+                       <a href="#" class="block px-4 py-2 text-sm text-gray-500 hover:bg-gray-100">个人信息 </a>
+                       <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">系统设置 未实现</a>
+                       <a v-if="user && user.role === 'admin'" href="/admin" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">后台管理</a>
+                       <button @click="forceLogout" class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200">
+                         <span class="flex items-center text-red-600 font-medium">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                           </svg>
+                           登出
+                         </span>
+                       </button>
+                     </div>
         </div>
       </div>
     </nav>
@@ -662,6 +674,30 @@ const groupName = computed(() => authStore.groupName.value)
 const forceLogout = () => {
   authStore.forceLogout()
 }
+
+// 用户菜单开关（移动端点击 + PC 端 hover 共存）
+const isUserMenuOpen = ref(false)
+const userMenuRef = ref(null)
+const toggleUserMenu = () => {
+  isUserMenuOpen.value = !isUserMenuOpen.value
+}
+
+onMounted(() => {
+  const onClickOutside = (e) => {
+    if (userMenuRef.value && !userMenuRef.value.contains(e.target)) {
+      isUserMenuOpen.value = false
+    }
+  }
+  const onKeydown = (e) => {
+    if (e.key === 'Escape') isUserMenuOpen.value = false
+  }
+  document.addEventListener('click', onClickOutside)
+  document.addEventListener('keydown', onKeydown)
+  onUnmounted(() => {
+    document.removeEventListener('click', onClickOutside)
+    document.removeEventListener('keydown', onKeydown)
+  })
+})
 
 // 添加Todo相关
 const showAddTodoModal = () => {
