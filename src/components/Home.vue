@@ -2,12 +2,12 @@
   <div class="min-h-screen bg-gray-50">
     <nav class="fixed top-0 left-0 right-0 z-50 flex items-center px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 justify-between">
       <div class="flex items-center">
-        <a class="transition-all duration-500 text-2xl font-bold text-white hover:text-gray-300" href="/home">ToDos</a>
+        <a class="transition-all duration-500 text-2xl font-bold text-white md:hover:text-gray-300" href="/home">ToDos</a>
       </div>
       
       <div class="flex items-center space-x-4">
         <div class="relative" ref="userMenu">
-          <div class="flex items-center space-x-2 cursor-pointer text-white py-1 px-3 rounded-lg transition-all duration-300 bg-indigo-600 hover:bg-indigo-700" @click="toggleUserMenu">
+          <div class="flex items-center space-x-2 cursor-pointer text-white py-1 px-3 rounded-lg transition-all duration-300 bg-indigo-600 md:hover:bg-indigo-700" @click="toggleUserMenu">
             <div class="flex flex-col items-start">
               <span class="font-medium text-1xl">{{ user.name || 'Guest' }}</span>
               <span class="text-xs text-indigo-200 flex items-center">
