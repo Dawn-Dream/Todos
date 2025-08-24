@@ -17,6 +17,10 @@
 - 任务管理（Todos）
   - 创建/查看/编辑/删除任务，支持优先级、状态、截止时间、分配到用户或用户组
   - 任务详情 Markdown 存储到后端文件系统
+- 渐进式 Web 应用 (PWA)
+  - 支持离线访问与缓存（Service Worker）
+  - 可安装到桌面/主屏幕（Web App Manifest）
+  - 推送通知（Web Push Notification）
 - 访问控制（核心）
   - 服务器端对 GET /todos 与 GET /todos/:id 做严格权限过滤
   - 只有创建者/管理员/属于任务 Belonging_users 或与任务 Belonging_groups 相交的成员可见
@@ -29,8 +33,8 @@
 
 ## 技术栈
 
-- 前端：Vue 3、Vue Router、Axios、Tailwind CSS、DaisyUI、Marked、Vite
-- 后端：Node.js、Express、JWT、bcryptjs、mysql2
+- 前端：Vue 3、Vue Router、Axios、Tailwind CSS、DaisyUI、Marked、Vite、PWA (Service Worker, Web App Manifest)
+- 后端：Node.js、Express、JWT、bcryptjs、mysql2、web-push
 - 数据库：MySQL 8.0
 - 部署：Docker / Docker Compose（生产镜像已提供）
 
@@ -48,7 +52,11 @@ Todos/
 │   ├── components/             # 视图组件（Home / Admin / TaskDetail / Login / Register）
 │   ├── store/auth.js           # 认证与多组支持（token/刷新/组名/组列表）
 │   ├── api.js                  # Axios 封装（自动带 token、401 自动刷新）
-│   └── config.js               # API_BASE_URL = '/api'（通过反向代理访问后端）
+│   ├── config.js               # API_BASE_URL = '/api'（通过反向代理访问后端）
+│   └── pwa.js                  # PWA Service Worker 注册与推送订阅逻辑
+├── public/
+│   ├── manifest.webmanifest    # PWA 应用清单
+│   └── sw.js                   # Service Worker 文件
 ├── backend/
 │   ├── index.js                # Express 入口（鉴权、路由、权限校验、详情文件读写）
 │   └── database/               # 数据库连接与迁移
@@ -68,6 +76,30 @@ Todos/
 # Docker 部署必填
 MYSQL_ROOT_PASSWORD=强随机密码
 JWT_SECRET=强随机JWT密钥
+
+# PWA Web Push 配置（后端使用）
+
+## 环境变量配置
+在`.env`文件中添加以下配置（或直接在部署环境中设置）：
+```env
+VAPID_SUBJECT="mailto:your-email@example.com" # 替换为您的实际邮箱
+VAPID_PUBLIC_KEY=您的VAPID公钥
+VAPID_PRIVATE_KEY=您的VAPID私钥
+```
+
+## 生成VAPID密钥
+1. 使用`web-push`库生成密钥对：
+```bash
+npx web-push generate-vapid-keys
+```
+2. 或者使用在线工具生成：https://web-push-codelab.glitch.me/
+
+## 部署注意事项
+1. 确保这些配置已正确应用到：
+   - 本地开发环境（`.env`文件）
+   - Docker环境（`docker-compose.yml`或环境变量）
+   - 生产部署环境
+2. `VAPID_PRIVATE_KEY`是敏感信息，请妥善保管。
 
 # 本地后端（backend/.env）可用（如不使用 Docker）
 DB_HOST=localhost
@@ -91,7 +123,7 @@ PORT=3000
 1) 准备环境变量
 ```
 cp .env.example .env
-# 编辑 .env，设置 MYSQL_ROOT_PASSWORD 与 JWT_SECRET
+# 编辑 .env，设置 MYSQL_ROOT_PASSWORD、JWT_SECRET、VAPID_SUBJECT、VAPID_PUBLIC_KEY、VAPID_PRIVATE_KEY
 ```
 
 2) 启动
@@ -103,7 +135,7 @@ docker-compose up -d
 - 前端：http://localhost:10001
 - 后端（直连）：http://localhost:10002
 
-> 说明：前端镜像内置 Nginx 将 /api 反向代理到后端，无需改动前端代码。
+> 说明：前端镜像内置 Nginx 将 /api 反向代理到后端，无需改动前端代码。PWA 相关功能（如推送）需要 HTTPS 环境，在生产部署时请配置 HTTPS。
 
 ### 方式二：本地开发（独立运行前后端）
 
@@ -118,9 +150,7 @@ npm run dev
 - 前端
 ```
 npm install
-# 开发环境下，Vite 未设置 /api 代理。
-# 临时方案 A：将 src/config.js 的 API_BASE_URL 改成 'http://localhost:3000'
-# 临时方案 B：自行在 Vite 配置 server.proxy 将 /api 指向 http://localhost:3000
+# 开发环境下，Vite 未设置 /api 代理。请确保 vite.config.js 中配置了 /api 的代理。
 npm run dev
 ```
 
@@ -183,6 +213,10 @@ npm run dev
   - POST /todo-details/:id
   - GET /todo-details/:id
   - DELETE /todo-details/:id
+- PWA 推送
+  - GET /push/publicKey         # 获取 VAPID 公钥
+  - POST /push/subscribe        # 订阅推送
+  - POST /push/test             # 测试推送（需要管理员权限）
 
 字段约定：
 - Status: -1=计划中, 0=进行中, 1=已完成, 2=已取消
@@ -198,6 +232,7 @@ npm run dev
   - localStorage token 持久化
   - refreshToken 与 fetchUserGroups
 - API_BASE_URL 在 <src/config.js>，默认 '/api'（需由反向代理映射到后端）
+- PWA 相关逻辑在 <src/pwa.js>：Service Worker 注册、推送订阅、取消订阅等
 
 ---
 

@@ -3,6 +3,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
+COPY public/ /app/public/
 RUN npm run build
 
 FROM joseluisq/static-web-server:2

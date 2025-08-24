@@ -8,6 +8,7 @@ import Admin from './components/Admin.vue'
 import TaskDetail from './components/TaskDetail.vue'
 import { createAuthStore } from './store/auth'
 import "./main.css"
+import { initPWA } from './pwa'
 
 // 路由配置
 const routes = [
@@ -54,3 +55,6 @@ app.use(router)
 app.provide('authStore', authStore)
 
 app.mount('#app')
+
+// 初始化 PWA（Service Worker 注册与推送订阅）
+initPWA(authStore)
