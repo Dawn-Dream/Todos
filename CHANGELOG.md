@@ -1,17 +1,17 @@
 # Changelog
 
-## v0.1.0
+## v0.1.1
 
-## [0.1.0](https://github.com/Dawn-Dream/Todos/compare/v0.0.4...v0.1.0) (2025-08-24)
+### [0.1.1](https://github.com/Dawn-Dream/Todos/compare/v0.1.0...v0.1.1) (2025-08-24)
 
 
-### Features
+### Bug Fixes
 
-* **PWA:** 添加渐进式Web应用支持包括Service Worker和推送通知 ([aa457eb](https://github.com/Dawn-Dream/Todos/commit/aa457ebf9501ed6ef1fad2907dfc9e6be0c0fda6))
+* **docker:** 修正后端服务启动命令配置 ([2cf5b8a](https://github.com/Dawn-Dream/Todos/commit/2cf5b8a16bea348cbd4c25ffe5af91600f209793))
 
 
 ### Documentation
 
-* **changelog:** update for v0.0.4 [skip ci] ([cb7fa5d](https://github.com/Dawn-Dream/Todos/commit/cb7fa5d389a4607e5c5b3fd12fcb79a53766e290))
+* **changelog:** update for v0.1.0 [skip ci] ([751ec2c](https://github.com/Dawn-Dream/Todos/commit/751ec2cd3d83c480b805999ec5a4dbff175ac823))
 
 
