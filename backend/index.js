@@ -6,6 +6,8 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
+const webPush = require('web-push');
+const subscriptionsFile = path.join(__dirname, 'push-subscriptions.json');
 
 // 引入新的数据库模块
 const { initializeConnection, getConnection, safeQuery } = require('./database/connection');
@@ -1276,4 +1278,52 @@ app.delete('/todo-details/:id', authenticateToken, (req, res) => {
     
     res.json({ message: '任务详情删除成功' });
   });
+});
+
+// 读取与保存订阅到文件
+function loadSubscriptions() {
+  try { return JSON.parse(fs.readFileSync(subscriptionsFile, 'utf-8')); } catch { return []; }
+}
+function saveSubscriptions(list) {
+  try { fs.writeFileSync(subscriptionsFile, JSON.stringify(list, null, 2), 'utf-8'); } catch (e) { console.error('保存订阅失败', e); }
+}
+
+// 设置 VAPID
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY && process.env.VAPID_SUBJECT) {
+  webPush.setVapidDetails(process.env.VAPID_SUBJECT, process.env.VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY);
+}
+// 暴露 VAPID 公钥（前端订阅需要）
+app.get('/push/publicKey', (req, res) => {
+  res.json({ key: process.env.VAPID_PUBLIC_KEY || '' });
+});
+
+// 保存推送订阅（需要登录）
+app.post('/push/subscribe', authenticateToken, (req, res) => {
+  const sub = req.body;
+  if (!sub || !sub.endpoint) return res.status(400).json({ message: '无效的订阅对象' });
+  const list = loadSubscriptions();
+  const exists = list.find((s) => s.endpoint === sub.endpoint);
+  if (!exists) {
+    list.push(sub);
+    saveSubscriptions(list);
+  }
+  res.json({ success: true });
+});
+
+// 管理员触发测试推送
+app.post('/push/test', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: '权限不足' });
+  const list = loadSubscriptions();
+  const payload = JSON.stringify({ title: 'Todos 通知', body: '这是一条测试推送', data: { url: '/home' } });
+  const results = [];
+  for (const sub of list) {
+    try {
+      await webPush.sendNotification(sub, payload);
+      results.push({ endpoint: sub.endpoint, ok: true });
+    } catch (e) {
+      console.error('推送失败', e?.statusCode, e?.body);
+      results.push({ endpoint: sub.endpoint, ok: false });
+    }
+  }
+  res.json({ sent: results.length, results });
 });
