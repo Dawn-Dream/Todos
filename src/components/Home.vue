@@ -6,8 +6,8 @@
       </div>
       
       <div class="flex items-center space-x-4">
-        <div class="relative group">
-          <div class="flex items-center space-x-2 cursor-pointer text-white py-1 px-3 rounded-lg transition-all duration-300 bg-indigo-600 hover:bg-indigo-700">
+        <div class="relative" ref="userMenu">
+          <div class="flex items-center space-x-2 cursor-pointer text-white py-1 px-3 rounded-lg transition-all duration-300 bg-indigo-600 hover:bg-indigo-700" @click="toggleUserMenu">
             <div class="flex flex-col items-start">
               <span class="font-medium text-1xl">{{ user.name || 'Guest' }}</span>
               <span class="text-xs text-indigo-200 flex items-center">
@@ -34,7 +34,7 @@
               <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
             </svg>
           </div>
-          <div class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-20">
+          <div :class="{'opacity-100 visible': showUserMenu, 'opacity-0 invisible': !showUserMenu}" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 transition-all duration-300 z-20">
             <a href="#" class="block px-4 py-2 text-sm text-gray-500 hover:bg-gray-100">个人信息 </a>
             <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">系统设置 未实现</a>
             <a v-if="user && user.role === 'admin'" href="/admin" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">后台管理</a>
