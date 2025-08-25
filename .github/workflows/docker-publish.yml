@@ -102,24 +102,41 @@ jobs:
           echo "" >> CHANGELOG.md
           printf "%s\n" "$CONTENT" >> CHANGELOG.md
 
-      - name: Pull latest changes before committing
+      - name: Handle potential conflicts and commit CHANGELOG.md
         if: steps.tag_version.outputs.new_tag != ''
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .
-          git stash
-          git pull origin main --rebase
-          git stash pop || true
-
-      - name: Commit CHANGELOG.md back to repository
-        if: steps.tag_version.outputs.new_tag != ''
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "docs(changelog): update for ${{ steps.tag_version.outputs.new_tag }} [skip ci]"
-          file_pattern: CHANGELOG.md
-          branch: main
-          pull: true
+          
+          # Check if there are any conflicts or uncommitted changes
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            # Add the CHANGELOG.md file
+            git add CHANGELOG.md
+            
+            # Try to pull latest changes
+            git fetch origin main
+            
+            # Check if we're behind
+            if ! git merge-base --is-ancestor origin/main HEAD; then
+              echo "Local branch is behind remote, attempting to merge"
+              git merge origin/main --no-edit || {
+                echo "Merge conflict detected, resolving by keeping our CHANGELOG.md"
+                git checkout --ours CHANGELOG.md
+                git add CHANGELOG.md
+                git commit -m "docs(changelog): update for ${{ steps.tag_version.outputs.new_tag }} [skip ci]"
+              }
+            fi
+            
+            # Commit if there are staged changes
+            if ! git diff --staged --quiet; then
+              git commit -m "docs(changelog): update for ${{ steps.tag_version.outputs.new_tag }} [skip ci]"
+            fi
+            
+            # Push the changes
+            git push origin main
+          fi
 
       - name: Create GitHub Release
         if: steps.tag_version.outputs.new_tag != ''
