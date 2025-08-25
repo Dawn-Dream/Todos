@@ -1,12 +1,12 @@
 # Changelog
 
-## v0.0.3
+## v0.1.5
 
-### [0.0.3](https://github.com/Dawn-Dream/Todos/compare/v0.0.2...v0.0.3) (2025-08-23)
+### [0.1.5](https://github.com/Dawn-Dream/Todos/compare/v0.1.4...v0.1.5) (2025-08-25)
 
 
-### Bug Fixes
+### Documentation
 
-* **ci:** 修正Docker镜像标签生成中的换行符问题 ([9912ab1](https://github.com/Dawn-Dream/Todos/commit/9912ab1334ed56b01b4641290c27a9b31507e579))
+* **changelog:** update for v0.1.4 [skip ci] ([3e70c04](https://github.com/Dawn-Dream/Todos/commit/3e70c04976274864dac95f31ff112793705821a1))
 
 
