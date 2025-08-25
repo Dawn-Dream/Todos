@@ -7,16 +7,14 @@
       
       <div class="flex items-center space-x-4">
         <div class="relative group" ref="userMenuRef">
-          <div 
-            class="flex items-center space-x-2 cursor-pointer text-white py-1 px-3 rounded-lg transition-all duration-300 bg-indigo-600 hover:bg-indigo-700"
-            @click="toggleUserMenu"
-            @keydown.enter.prevent="toggleUserMenu"
-            @keydown.space.prevent="toggleUserMenu"
-            role="button"
-            tabindex="0"
-            :aria-expanded="isUserMenuOpen.toString()"
-            aria-haspopup="menu"
-          >
+          <div class="flex items-center space-x-2 cursor-pointer text-white py-1 px-3 rounded-lg transition-all duration-300 bg-indigo-600 hover:bg-indigo-700"
+               @click="toggleUserMenu"
+               @keydown.enter.prevent="toggleUserMenu"
+               @keydown.space.prevent="toggleUserMenu"
+               role="button"
+               tabindex="0"
+               :aria-expanded="isUserMenuOpen.toString()"
+               aria-haspopup="menu">
             <div class="flex flex-col items-start">
               <span class="font-medium text-1xl">{{ user.name || 'Guest' }}</span>
               <span class="text-xs text-indigo-200 flex items-center">
@@ -44,7 +42,7 @@
             </svg>
           </div>
           <div 
-            class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 transition-all duration-300 z-20 opacity-0 invisible group-hover:opacity-100 group-hover:visible"
+            class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-20"
             :class="isUserMenuOpen ? 'opacity-100 visible' : ''"
           >
                        <a href="#" class="block px-4 py-2 text-sm text-gray-500 hover:bg-gray-100">个人信息 </a>
