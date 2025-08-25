@@ -31,7 +31,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Only merge PRs explicitly labeled as 'automerge'
-          REQUIRED_LABELS: automerge
+          # REQUIRED_LABELS: automerge # Removed to allow auto-merge without specific labels
           # Optional label that can block automerge if present
           # BLOCKING_LABELS: do-not-merge
 
@@ -43,7 +43,7 @@ jobs:
           UPDATE_METHOD: rebase
 
           # Clean up the source branch if it belongs to the same repo
-          MERGE_DELETE_BRANCH: true
+          MERGE_DELETE_BRANCH: false # Changed to false to keep the branch after merge
 
           # Do not merge from forks for safety
           MERGE_FORKS: false
