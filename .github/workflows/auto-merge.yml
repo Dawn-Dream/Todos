@@ -33,7 +33,7 @@ jobs:
           # Only merge PRs explicitly labeled as 'automerge'
           # REQUIRED_LABELS: automerge # Removed to allow auto-merge without specific labels
           # Optional label that can block automerge if present
-          # BLOCKING_LABELS: do-not-merge
+          BLOCKING_LABELS: do-not-merge
 
           # Merge strategy
           MERGE_METHOD: squash
