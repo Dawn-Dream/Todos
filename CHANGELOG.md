@@ -1,17 +1,12 @@
 # Changelog
 
-## v0.1.3
+## v0.1.4
 
-### [0.1.3](https://github.com/Dawn-Dream/Todos/compare/v0.1.2...v0.1.3) (2025-08-24)
-
-
-### Bug Fixes
-
-* **用户菜单:** 改进用户菜单交互体验 ([5da783a](https://github.com/Dawn-Dream/Todos/commit/5da783a36702054f7ae669356a01cd52a52cb5b2))
+### [0.1.4](https://github.com/Dawn-Dream/Todos/compare/v0.1.3...v0.1.4) (2025-08-25)
 
 
 ### Documentation
 
-* **changelog:** update for v0.1.2 [skip ci] ([4196997](https://github.com/Dawn-Dream/Todos/commit/4196997129b11b67107bc921749c8e15453fd7b5))
+* **changelog:** update for v0.1.3 [skip ci] ([58a2fb9](https://github.com/Dawn-Dream/Todos/commit/58a2fb9661c7331c2903a0bf71b02cc32ba9ea9b))
 
 
