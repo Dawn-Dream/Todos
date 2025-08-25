@@ -102,6 +102,13 @@ jobs:
           echo "" >> CHANGELOG.md
           printf "%s\n" "$CONTENT" >> CHANGELOG.md
 
+      - name: Pull latest changes before committing
+        if: steps.tag_version.outputs.new_tag != ''
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull origin main --rebase
+
       - name: Commit CHANGELOG.md back to repository
         if: steps.tag_version.outputs.new_tag != ''
         uses: stefanzweifel/git-auto-commit-action@v5
@@ -109,6 +116,7 @@ jobs:
           commit_message: "docs(changelog): update for ${{ steps.tag_version.outputs.new_tag }} [skip ci]"
           file_pattern: CHANGELOG.md
           branch: main
+          pull: true
 
       - name: Create GitHub Release
         if: steps.tag_version.outputs.new_tag != ''
