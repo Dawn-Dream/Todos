@@ -1,0 +1,52 @@
+name: PR Auto Merge
+
+on:
+  # Trigger on PR lifecycle changes
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
+  # Trigger when reviews are submitted
+  pull_request_review:
+    types: [submitted]
+  # Trigger when all checks complete
+  check_suite:
+    types: [completed]
+  # Trigger on status updates from external checks
+  status: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: automerge-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  automerge:
+    name: Automerge when labeled and checks pass
+    runs-on: ubuntu-latest
+    steps:
+      - name: Automerge PRs with the 'automerge' label
+        uses: pascalgn/automerge-action@v0.16.3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Only merge PRs explicitly labeled as 'automerge'
+          REQUIRED_LABELS: automerge
+          # Optional label that can block automerge if present
+          # BLOCKING_LABELS: do-not-merge
+
+          # Merge strategy
+          MERGE_METHOD: squash
+          MERGE_COMMIT_MESSAGE: pull-request-title
+
+          # Keep PR up-to-date before merging (rebase or merge)
+          UPDATE_METHOD: rebase
+
+          # Clean up the source branch if it belongs to the same repo
+          MERGE_DELETE_BRANCH: true
+
+          # Do not merge from forks for safety
+          MERGE_FORKS: false
+
+          # Optional: only attempt when PR is ready for review (not draft)
+          AUTOREMOVE_PR_LABELS: false

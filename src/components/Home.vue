@@ -4,61 +4,76 @@
       <div class="flex items-center">
         <a class="transition-all duration-500 text-2xl font-bold text-white hover:text-gray-300" href="/home">ToDos</a>
       </div>
-      
       <div class="flex items-center space-x-4">
-        <div class="relative group" ref="userMenuRef">
-          <div class="flex items-center space-x-2 cursor-pointer text-white py-1 px-3 rounded-lg transition-all duration-300 bg-indigo-600 hover:bg-indigo-700"
-               @click="toggleUserMenu"
-               @keydown.enter.prevent="toggleUserMenu"
-               @keydown.space.prevent="toggleUserMenu"
-               role="button"
-               tabindex="0"
-               :aria-expanded="isUserMenuOpen.toString()"
-               aria-haspopup="menu">
-            <div class="flex flex-col items-start">
-              <span class="font-medium text-1xl">{{ user.name || 'Guest' }}</span>
-              <span class="text-xs text-indigo-200 flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-                <template v-if="userGroups && userGroups.length > 0">
-                  <span v-for="g in userGroups" :key="g.id" class="mr-2">
-                    {{ g.name }}
-                    <span v-if="g.leaders && g.leaders.length > 0" class="ml-1">
-                      (组长: {{ g.leaders.map(id => {
-                        const u = allUsers.find(u => u.id === id);
-                        return u ? u.name : id;
-                      }).join(', ') }})
-                    </span>
-                  </span>
-                </template>
-                <template v-else>
-                  无用户组
-                </template>
-              </span>
-            </div>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-            </svg>
-          </div>
-          <div 
-            class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-20"
-            :class="isUserMenuOpen ? 'opacity-100 visible' : ''"
-          >
-                       <a href="#" class="block px-4 py-2 text-sm text-gray-500 hover:bg-gray-100">个人信息 </a>
-                       <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">系统设置 未实现</a>
-                       <a v-if="user && user.role === 'admin'" href="/admin" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">后台管理</a>
-                       <button @click="forceLogout" class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200">
-                         <span class="flex items-center text-red-600 font-medium">
-                           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                           </svg>
-                           登出
-                         </span>
-                       </button>
-                     </div>
-        </div>
+  <Menu as="div" class="relative">
+    <MenuButton class="flex items-center space-x-2 cursor-pointer text-white py-1 px-3 rounded-lg transition-all duration-300 bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75">
+      <div class="flex flex-col items-start">
+        <span class="font-medium text-1xl">{{ user.name || 'Guest' }}</span>
+        <span class="text-xs text-indigo-200 flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+          <span>{{ userGroupsText }}</span>
+        </span>
       </div>
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+      </svg>
+    </MenuButton>
+    <transition
+      enter-active-class="transition duration-100 ease-out"
+      enter-from-class="transform scale-95 opacity-0"
+      enter-to-class="transform scale-100 opacity-100"
+      leave-active-class="transition duration-75 ease-in"
+      leave-from-class="transform scale-100 opacity-100"
+      leave-to-class="transform scale-95 opacity-0"
+    >
+      <MenuItems class="absolute right-0 mt-2 w-48 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+        <div class="px-1 py-1">
+          <MenuItem v-slot="{ active }">
+            <a href="#" :class="[
+                active ? 'bg-gray-100' : '',
+                'block px-4 py-2 text-sm text-gray-700'
+              ]">
+              个人信息
+            </a>
+          </MenuItem>
+          <MenuItem v-slot="{ active }">
+            <a href="#" :class="[
+                active ? 'bg-gray-100' : '',
+                'block px-4 py-2 text-sm text-gray-700'
+              ]">
+              系统设置 未实现
+            </a>
+          </MenuItem>
+          <MenuItem v-if="user && user.role === 'admin'" v-slot="{ active }">
+            <a href="/admin" :class="[
+                active ? 'bg-gray-100' : '',
+                'block px-4 py-2 text-sm text-gray-700'
+              ]">
+              后台管理
+            </a>
+          </MenuItem>
+        </div>
+        <div class="px-1 py-1">
+          <MenuItem v-slot="{ active }">
+            <button @click="forceLogout" :class="[
+                active ? 'bg-gray-100' : '',
+                'w-full text-left block px-4 py-2 text-sm text-red-600 font-medium'
+              ]">
+              <span class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                登出
+              </span>
+            </button>
+          </MenuItem>
+        </div>
+      </MenuItems>
+    </transition>
+  </Menu>
+</div>
     </nav>
     
     <div class="container mx-auto px-4 pt-20 pb-8">
@@ -105,10 +120,10 @@
                 <span 
                   class="px-2 py-1 text-xs font-semibold rounded-full" 
                   :class="{
-                    'bg-blue-100 text-blue-800': todo.Status == -1, // 计划中
-                    'bg-yellow-100 text-yellow-800': todo.Status == 0, // 进行中
-                    'bg-green-100 text-green-800': todo.Status == 1, // 已完成
-                    'bg-red-100 text-red-800': todo.Status == 2 // 已取消
+                    'bg-blue-100 text-blue-800': todo.Status == -1,
+                    'bg-yellow-100 text-yellow-800': todo.Status == 0,
+                    'bg-green-100 text-green-800': todo.Status == 1,
+                    'bg-red-100 text-red-800': todo.Status == 2
                   }"
                 >
                   {{ getStatusText(todo.Status) }}
@@ -137,16 +152,10 @@
               
               <div class="mt-4 flex flex-wrap gap-2">
                 <span v-if="todo.Belonging_users && todo.Belonging_users.length > 0" class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                  用户: {{ todo.Belonging_users.map(id => {
-                    const user = allUsers.find(u => u.id === id);
-                    return user ? user.name : id;
-                  }).join(', ') }}
+                  用户: {{ userNames(todo.Belonging_users) }}
                 </span>
                 <span v-if="todo.Belonging_groups && todo.Belonging_groups.length > 0" class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                  组: {{ todo.Belonging_groups.map(id => {
-                    const group = allGroups.find(g => g.id === id);
-                    return group ? group.name : id;
-                  }).join(', ') }}
+                  组: {{ groupNames(todo.Belonging_groups) }}
                 </span>
               </div>
               
@@ -504,9 +513,10 @@
 
 <script setup>
 import { inject, computed, ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue'
 import axios from 'axios'
 import { API_BASE_URL } from '../config'
-import { useRouter } from 'vue-router'
 
 axios.defaults.responseType = 'json';
 axios.defaults.headers.common['Accept'] = 'application/json; charset=utf-8';
@@ -665,6 +675,21 @@ const user = computed(() => authStore.user.value)
 // 从认证仓库获取多用户组
 const userGroups = computed(() => authStore.userGroups.value || [])
 
+// 统一格式化用户组+组长显示文本，避免在模板中嵌套复杂结构
+const userGroupsText = computed(() => {
+  const groups = userGroups.value
+  if (!groups || groups.length === 0) return '无用户组'
+  return groups.map(g => {
+    const leaders = (g.leaders || [])
+      .map(id => {
+        const u = allUsers.value.find(u => u.id === id)
+        return u ? u.name : id
+      })
+      .join(', ')
+    return leaders ? `${g.name} (组长: ${leaders})` : g.name
+  }).join(' ')
+})
+
 // 用户组名称（兼容旧逻辑，可能不再用于展示）
 const groupName = computed(() => authStore.groupName.value)
 
@@ -672,30 +697,6 @@ const groupName = computed(() => authStore.groupName.value)
 const forceLogout = () => {
   authStore.forceLogout()
 }
-
-// 用户菜单开关（移动端点击 + PC 端 hover 共存）
-const isUserMenuOpen = ref(false)
-const userMenuRef = ref(null)
-const toggleUserMenu = () => {
-  isUserMenuOpen.value = !isUserMenuOpen.value
-}
-
-onMounted(() => {
-  const onClickOutside = (e) => {
-    if (userMenuRef.value && !userMenuRef.value.contains(e.target)) {
-      isUserMenuOpen.value = false
-    }
-  }
-  const onKeydown = (e) => {
-    if (e.key === 'Escape') isUserMenuOpen.value = false
-  }
-  document.addEventListener('click', onClickOutside)
-  document.addEventListener('keydown', onKeydown)
-  onUnmounted(() => {
-    document.removeEventListener('click', onClickOutside)
-    document.removeEventListener('keydown', onKeydown)
-  })
-})
 
 // 添加Todo相关
 const showAddTodoModal = () => {
@@ -781,6 +782,22 @@ const formatDate = (dateString) => {
     month: '2-digit',
     day: '2-digit'
   });
+};
+
+// 将用户ID数组转换为用户名字符串
+const userNames = (ids = []) => {
+  return (ids || []).map(id => {
+    const u = allUsers.value.find(u => u.id === id)
+    return u ? u.name : id
+  }).join(', ')
+};
+
+// 将组ID数组转换为组名字符串
+const groupNames = (ids = []) => {
+  return (ids || []).map(id => {
+    const g = allGroups.value.find(g => g.id === id)
+    return g ? g.name : id
+  }).join(', ')
 };
 
 // 提交新Todo
