@@ -52,7 +52,7 @@ export function createAuthStore() {
   async function register(username, name, password, group) {
     try {
       // 调用后端注册API
-      const response = await axios.post(`${API_BASE_URL}/register`, { username, name, password, group })
+      const response = await axios.post(`${API_BASE_URL}/register`, { username, name, password, groupId: group })
       
       return { success: true, message: response.data.message }
     } catch (error) {

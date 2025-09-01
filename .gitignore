@@ -139,3 +139,4 @@ dist
 backend/todo-details/**
 
 .DS_Store
+.vscode/settings.json

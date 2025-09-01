@@ -18,7 +18,7 @@
                   {{ groupName || '无用户组' }}
                   <span v-if="groupLeaders && groupLeaders.length > 0" class="ml-2">
                   (组长: {{ groupLeaders.map(id => {
-                    const user = allUsers.find(u => u.id === id);
+                    const user = allUsers.find(u => idsEqual(u.id, id));
                     return user ? user.name : id;
                   }).join(', ') }})
                 </span>
@@ -702,6 +702,8 @@
 import { inject, ref, onMounted, onUnmounted, computed } from 'vue'
 import axios from 'axios'
 import { API_BASE_URL } from '../config'
+// 新增：导入 Headless UI 组件，避免 v-slot 接收 undefined 导致的报错
+import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue'
 
 // 注入认证状态
 const authStore = inject('authStore')
@@ -889,7 +891,7 @@ const submitNewGroup = async () => {
   const groupData = {
     name: newGroupName.value.trim(),
     description: newGroupDescription.value.trim(),
-    leaders: newGroupLeaders.value
+    leaders: (newGroupLeaders.value || []).map(id => Number(id)).filter(n => !isNaN(n))
   }
 
   try {
@@ -916,13 +918,8 @@ const submitNewGroup = async () => {
 // 提交编辑用户
 const submitEditUser = async () => {
   try {
-    // 验证必填字段
-    if (!editUserUsername.value.trim() || !editUserName.value.trim()) {
-      alert('用户名和姓名是必填项')
-      return
-    }
-    
-    // 准备数据
+    if (!editingUser.value) return
+    const userId = editingUser.value.id
     const userData = {
       username: editUserUsername.value,
       name: editUserName.value,
@@ -930,31 +927,14 @@ const submitEditUser = async () => {
       groupIds: editUserGroupIds.value
     }
     
-    // 如果密码字段不为空，则添加到请求数据中
-    if (editUserPassword.value.trim()) {
-      userData.password = editUserPassword.value.trim()
-    }
-    
-    // 发送请求到/users/:id接口
-    const response = await axios.put(`${API_BASE_URL}/users/${editingUser.value.id}`, userData, {
-      headers: {
-        'Authorization': `Bearer ${authStore.token.value}`
-      }
+    const response = await axios.put(`${API_BASE_URL}/users/${userId}`, userData, {
+      headers: { 'Authorization': `Bearer ${authStore.token.value}` }
     })
     
-    // 检查响应状态码
     if (response.status === 200) {
-      // 成功后隐藏模态框
+      alert('用户信息更新成功')
+      await fetchAllUsersAndGroups();
       isEditUserModalVisible.value = false
-      
-      // 显示成功消息
-      alert('用户更新成功')
-      
-      // 刷新用户列表
-      await fetchUsers();
-      
-      // 刷新token以获取最新的用户信息
-      await authStore.fetchUserGroups()
     } else {
       alert('更新失败: ' + response.data.message)
     }
@@ -974,7 +954,7 @@ const submitEditGroup = async () => {
   const groupData = {
     name: editGroupName.value.trim(),
     description: editGroupDescription.value.trim(),
-    leaders: editGroupLeaders.value
+    leaders: (editGroupLeaders.value || []).map(id => Number(id)).filter(n => !isNaN(n))
   }
 
   try {
@@ -1125,15 +1105,24 @@ const fetchTodos = async () => {
   }
 }
 
+// ID 比较工具：优先数值等值，其次字符串等值（兼容 MySQL 数字ID与 Mongo ObjectId 字符串）
+const idsEqual = (a, b) => {
+  if (a == null || b == null) return false
+  const numA = Number(a)
+  const numB = Number(b)
+  if (!Number.isNaN(numA) && !Number.isNaN(numB)) return numA === numB
+  return String(a) === String(b)
+}
+
 // 根据ID获取用户信息
 const getUserById = (userId) => {
-  const user = users.value.find(user => user.id === userId);
-  return user ? user.name : '未知用户';
-}
+  const user = users.value.find(user => idsEqual(user.id, userId));
+   return user ? user.name : '未知用户';
+ }
 
 // 根据ID获取用户组信息
 const getGroupById = (groupId) => {
-  const group = groups.value.find(group => group.id === groupId);
+  const group = groups.value.find(group => idsEqual(group.id, groupId));
   return group ? group.name : '未知用户组';
 }
 
@@ -1230,9 +1219,8 @@ const submitEditTask = async () => {
       deadline: editTaskDeadline.value || null,
       Priority: editTaskPriority.value,
       Status: getStatusValue(editTaskStatus.value),
-      // 使用用户选择的值，确保空数组被正确处理
-      Belonging_users: selectedEditTaskUsers.value.length > 0 ? selectedEditTaskUsers.value : [],
-      Belonging_groups: selectedEditTaskGroups.value.length > 0 ? selectedEditTaskGroups.value : []
+      Belonging_users: selectedEditTaskUsers.value.length > 0 ? selectedEditTaskUsers.value.map(id => Number(id)).filter(n => !isNaN(n)) : [],
+      Belonging_groups: selectedEditTaskGroups.value.length > 0 ? selectedEditTaskGroups.value.map(id => Number(id)).filter(n => !isNaN(n)) : []
     }
     
     // 发送请求
@@ -1286,7 +1274,7 @@ const deleteTask = async (taskId) => {
 // 获取用户组成员
 const getGroupMembers = (groupId) => {
   return users.value.filter(user => 
-    user.groups && user.groups.some(group => group.id === groupId)
+    user.groups && user.groups.some(group => idsEqual(group.id, groupId))
   )
 }
 

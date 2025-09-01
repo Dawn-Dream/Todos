@@ -603,6 +603,15 @@ const fetchAllGroups = async () => {
   }
 }
 
+// ID 比较工具：优先数值等值，其次字符串等值（兼容 MySQL 数字ID与 Mongo ObjectId 字符串）
+const idsEqual = (a, b) => {
+  if (a == null || b == null) return false
+  const numA = Number(a)
+  const numB = Number(b)
+  if (!Number.isNaN(numA) && !Number.isNaN(numB)) return numA === numB
+  return String(a) === String(b)
+}
+
 // 检查用户是否有编辑权限
 const checkEditPermission = (todo) => {
   // 检查用户是否是管理员
@@ -611,24 +620,23 @@ const checkEditPermission = (todo) => {
   }
   
   // 检查用户是否是任务的创建者
-  if (todo.creator_id === authStore.user.value.id) {
-    return true
-  }
+  if (idsEqual(todo.creator_id, authStore.user.value.id)) {
+     return true
+   }
   
-  // 检查用户是否是任务的管理员
-  if (todo.admin_users && todo.admin_users.includes(authStore.user.value.id)) {
-    return true
-  }
+  if (todo.admin_users && todo.admin_users.map(id => Number(id)).includes(Number(authStore.user.value.id))) {
+     return true
+   }
   
-  // 检查用户是否是任务关联用户组的组长
-  if (todo.Belonging_groups && todo.Belonging_groups.length > 0) {
-    for (const groupId of todo.Belonging_groups) {
-      const group = allGroups.value.find(g => g.id === groupId)
-      if (group && group.leaders && group.leaders.includes(authStore.user.value.id)) {
-        return true
+   // 检查用户是否是任务关联用户组的组长
+   if (todo.Belonging_groups && todo.Belonging_groups.length > 0) {
+     for (const groupId of todo.Belonging_groups) {
+       const group = allGroups.value.find(g => idsEqual(g.id, groupId))
+       if (group && group.leaders && group.leaders.map(id => Number(id)).includes(Number(authStore.user.value.id))) {
+          return true
+        }
       }
     }
-  }
   
   return false
 }
@@ -646,17 +654,23 @@ const fetchTodos = async () => {
     })
     
     const userId = authStore.user.value.id
-    const userGroupIds = (authStore.userGroups.value || []).map(g => g.id)
+    const userRole = authStore.user.value?.role
+    const userGroupIds = (authStore.userGroups.value || []).map(g => Number(g.id)).filter(n => !isNaN(n))
     
-    todos.value = response.data.todos.filter(todo => {
-      if (todo.Belonging_users && todo.Belonging_users.includes(userId)) {
+    const source = Array.isArray(response.data.todos) ? response.data.todos : []
+
+    const visible = (userRole === 'admin') ? source : source.filter(todo => {
+      if (Array.isArray(todo.Belonging_users) && todo.Belonging_users.map(id => Number(id)).includes(Number(userId))) {
         return true
       }
-      if (userGroupIds.length > 0 && todo.Belonging_groups && todo.Belonging_groups.some(gid => userGroupIds.includes(gid))) {
+
+      if (userGroupIds.length > 0 && todo.Belonging_groups && todo.Belonging_groups.some(gid => userGroupIds.includes(Number(gid)))) {
         return true
       }
       return false
-    }).map(todo => ({
+    })
+
+    todos.value = visible.map(todo => ({
       ...todo,
       Status: Number(todo.Status),
       Priority: String(todo.Priority)
@@ -682,7 +696,7 @@ const userGroupsText = computed(() => {
   return groups.map(g => {
     const leaders = (g.leaders || [])
       .map(id => {
-        const u = allUsers.value.find(u => u.id === id)
+        const u = allUsers.value.find(u => idsEqual(u.id, id))
         return u ? u.name : id
       })
       .join(', ')
@@ -787,18 +801,18 @@ const formatDate = (dateString) => {
 // 将用户ID数组转换为用户名字符串
 const userNames = (ids = []) => {
   return (ids || []).map(id => {
-    const u = allUsers.value.find(u => u.id === id)
-    return u ? u.name : id
+    const u = allUsers.value.find(u => idsEqual(u.id, id))
+     return u ? u.name : id
   }).join(', ')
-};
+}
 
 // 将组ID数组转换为组名字符串
 const groupNames = (ids = []) => {
   return (ids || []).map(id => {
-    const g = allGroups.value.find(g => g.id === id)
-    return g ? g.name : id
+    const g = allGroups.value.find(g => idsEqual(g.id, id))
+     return g ? g.name : id
   }).join(', ')
-};
+}
 
 // 提交新Todo
 const submitNewTodo = async () => {
@@ -817,8 +831,8 @@ const submitNewTodo = async () => {
       Priority: newTodoPriority.value,
       Status: getStatusValue(newTodoStatus.value),
       // 使用用户选择的值，确保空数组被正确处理
-      Belonging_users: selectedUsers.value.length > 0 ? selectedUsers.value : [],
-      Belonging_groups: selectedGroups.value.length > 0 ? selectedGroups.value : []
+      Belonging_users: selectedUsers.value.length > 0 ? selectedUsers.value.map(id => Number(id)).filter(n => !isNaN(n)) : [],
+      Belonging_groups: selectedGroups.value.length > 0 ? selectedGroups.value.map(g => Number(g)) : []
     }
     
     // 发送请求
@@ -899,8 +913,8 @@ const updateTodo = async () => {
       Priority: editTodoPriority.value,
       Status: getStatusValue(editTodoStatus.value),
       // 使用用户选择的值，确保空数组被正确处理
-      Belonging_users: selectedEditUsers.value.length > 0 ? selectedEditUsers.value : [],
-      Belonging_groups: selectedEditGroups.value.length > 0 ? selectedEditGroups.value : []
+      Belonging_users: selectedEditUsers.value.length > 0 ? selectedEditUsers.value.map(id => Number(id)).filter(n => !isNaN(n)) : [],
+      Belonging_groups: selectedEditGroups.value.length > 0 ? selectedEditGroups.value.map(g => Number(g)).filter(n => !isNaN(n)) : []
     }
     
     // 发送请求
@@ -932,7 +946,7 @@ const updateTodo = async () => {
 // 删除Todo
 const deleteTodo = async (id) => {
   // 找到要删除的todo以检查权限
-  const todo = todos.value.find(t => t.id === id);
+  const todo = todos.value.find(t => idsEqual(t.id, id));
   if (todo && !checkEditPermission(todo)) {
     alert('您没有权限删除此任务');
     return;

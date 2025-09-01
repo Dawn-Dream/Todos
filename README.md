@@ -78,6 +78,7 @@ MYSQL_ROOT_PASSWORD=强随机密码
 JWT_SECRET=强随机JWT密钥
 
 # PWA Web Push 配置（后端使用）
+```
 
 ## 环境变量配置
 在`.env`文件中添加以下配置（或直接在部署环境中设置）：
@@ -112,6 +113,7 @@ npx web-push generate-vapid-keys
      本项目的 `backend/index.js` 已包含 `require('dotenv').config()`，无需通过 `-r dotenv/config` 预加载。
 
 # 本地后端（backend/.env）可用（如不使用 Docker）
+```
 DB_HOST=localhost
 DB_PORT=3306
 DB_USER=root
@@ -275,7 +277,3 @@ npm run dev
 
 - 许可证：详见 LICENSE
 - 欢迎提交 Issue / PR 改进项目
-
-—
-
-让团队协作与任务管理更简单！

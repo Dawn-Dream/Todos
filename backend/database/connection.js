@@ -100,7 +100,9 @@ async function initializeConnection(options = {}) {
         console.error('数据库连接错误:', err);
         if (err.code === 'PROTOCOL_CONNECTION_LOST') {
           console.log('尝试重新连接数据库...');
-          initializeConnection(options);
+          initializeConnection(options).catch((reErr) => {
+            console.error('重连失败:', reErr);
+          });
         }
       });
       

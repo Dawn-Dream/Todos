@@ -35,12 +35,12 @@
             <MenuItems class="absolute right-0 mt-2 w-48 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
               <div class="px-1 py-1">
                 <MenuItem v-slot="{ active }">
-                  <a href="#" :class="[active ? 'bg-gray-100' : '', 'block px-4 py-2 text-sm text-gray-700']">个人信息</a>
+                  <a href="/" :class="[active ? 'bg-gray-100' : '', 'block px-4 py-2 text-sm text-gray-700']">个人信息</a>
                 </MenuItem>
                 <MenuItem v-slot="{ active }">
                   <a href="#" :class="[active ? 'bg-gray-100' : '', 'block px-4 py-2 text-sm text-gray-700']">系统设置</a>
                 </MenuItem>
-                <MenuItem v-if="user && user.role === 'admin'" v-slot="{ active }">
+                <MenuItem v-if="isAdmin" v-slot="{ active }">
                   <a href="/admin" :class="[active ? 'bg-gray-100' : '', 'block px-4 py-2 text-sm text-gray-700']">后台管理</a>
                 </MenuItem>
               </div>
@@ -450,39 +450,25 @@ const selectedEditGroups = ref([])
 const allUsers = ref([])
 const allGroups = ref([])
 
-// 获取用户信息
-const user = computed(() => authStore.user.value)
+// 获取用户信息（computed 只读）
+const user = computed(() => authStore.user.value || {})
+const isAdmin = computed(() => (authStore.user.value?.role === 'admin'))
 const groupName = ref('')
 
-// 修复：确保user变量正确初始化
-if (!user.value) {
-  user.value = {}
-}
-
+// 移除错误的对 computed 赋值逻辑
+// onMounted 初始化
 onMounted(async () => {
   try {
-    //console.log('TaskDetail onMounted started')
-    // 获取用户信息
-    user.value = authStore.user.value || {}
-    //console.log('User info:', user.value)
-    
-    // 获取用户组名称
     await authStore.fetchGroupName()
-    groupName.value = authStore.groupName.value
-    //console.log('Group name:', groupName.value)
-    
-    // 获取所有用户和组数据
+    groupName.value = authStore.groupName.value || ''
+
     await fetchAllUsers()
     await fetchAllGroups()
-    //console.log('All users:', allUsers.value)
-    //console.log('All groups:', allGroups.value)
-    
-    // 获取任务详情
+
     await fetchTodo()
-    //console.log('Todo data:', todo.value)
-  } catch (error) {
-    console.error('Error in onMounted:', error)
-    error.value = '页面加载失败: ' + error.message
+  } catch (e) {
+    console.error('Error in onMounted:', e)
+    error.value = '页面加载失败: ' + (e?.message || e)
   }
 })
 
@@ -519,13 +505,22 @@ const fetchAllGroups = async () => {
 // 根据ID获取用户
 const getUserById = (id) => {
   if (!Array.isArray(allUsers.value)) return null
-  return allUsers.value.find(user => user.id === id)
+  return allUsers.value.find(user => idsEqual(user.id, id))
+}
+
+// ID 比较工具：优先数值等值，其次字符串等值（兼容 MySQL 数字ID与 Mongo ObjectId 字符串）
+const idsEqual = (a, b) => {
+  if (a == null || b == null) return false
+  const numA = Number(a)
+  const numB = Number(b)
+  if (!Number.isNaN(numA) && !Number.isNaN(numB)) return numA === numB
+  return String(a) === String(b)
 }
 
 // 根据ID获取用户组
 const getGroupById = (id) => {
   if (!Array.isArray(allGroups.value)) return null
-  return allGroups.value.find(group => group.id === id)
+  return allGroups.value.find(group => idsEqual(group.id, id))
 }
 
 // 获取任务详情
@@ -560,39 +555,36 @@ const fetchTodo = async () => {
 
 // 检查用户是否有编辑权限
 const checkEditPermission = () => {
-  // 如果用户是管理员，拥有编辑权限
-  if (user.value.role === 'admin') {
+  // 管理员直接放行
+  if (isAdmin.value) {
     hasEditPermission.value = true
     return
   }
-  
-  // 检查用户是否是任务的创建者
-  if (todo.value.creator_id && todo.value.creator_id === user.value.id) {
+  const me = user.value || {}
+  const t = todo.value || {}
+
+  // 创建者或管理员
+  if (t.creator_id && idsEqual(t.creator_id, me.id)) {
     hasEditPermission.value = true
     return
   }
-  
-  // 检查用户是否是任务的管理员
-  if (todo.value.administrator_id && todo.value.administrator_id === user.value.id) {
+  if (t.administrator_id && idsEqual(t.administrator_id, me.id)) {
     hasEditPermission.value = true
     return
   }
-  
-  // 检查用户是否是关联用户组的组长
-  if (todo.value.Belonging_groups && Array.isArray(todo.value.Belonging_groups)) {
-    const userGroup = allGroups.value.find(group => group.id === user.value.group_id)
-    if (userGroup && userGroup.leaders && Array.isArray(userGroup.leaders)) {
-      if (userGroup.leaders.includes(user.value.id)) {
-        // 用户是某个组的组长，检查任务是否关联到该组
-        if (todo.value.Belonging_groups.some(groupId => groupId === user.value.group_id)) {
-          hasEditPermission.value = true
-          return
-        }
+
+  // 用户所在组的组长并且任务关联该组
+  if (Array.isArray(t.Belonging_groups)) {
+    const myGroup = allGroups.value?.find(g => idsEqual(g.id, me.groupId))
+    if (myGroup && Array.isArray(myGroup.leaders)) {
+      const isLeader = myGroup.leaders.some(id => idsEqual(id, me.id))
+      if (isLeader && t.Belonging_groups.some(gid => idsEqual(gid, me.groupId))) {
+        hasEditPermission.value = true
+        return
       }
     }
   }
-  
-  // 默认没有编辑权限
+
   hasEditPermission.value = false
 }
 
@@ -778,7 +770,7 @@ const updateTodo = async () => {
       Status: getStatusValue(editTodoStatus.value),
       // 使用用户选择的值，确保空数组被正确处理
       Belonging_users: selectedEditUsers.value.length > 0 ? selectedEditUsers.value : [],
-      Belonging_groups: selectedEditGroups.value.length > 0 ? selectedEditGroups.value : []
+      Belonging_groups: selectedEditGroups.value.length > 0 ? selectedEditGroups.value.map(id => Number(id)).filter(n => !isNaN(n)) : []
     }
     
     // 发送请求

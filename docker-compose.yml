@@ -18,6 +18,9 @@ services:
       - DB_USER=root
       - DB_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - DB_NAME=todos_db
+      - MONGO_URI=mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-password}@mongodb:27017/todos_db?authSource=admin
+      - DB_READ_FROM=${DB_READ_FROM:-mysql}
+      - DB_WRITE_MODE=${DB_WRITE_MODE:-mysql}
       - JWT_SECRET=${JWT_SECRET}
       - VAPID_SUBJECT=${VAPID_SUBJECT}
       - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}
@@ -28,6 +31,7 @@ services:
       - app-network
     depends_on:
       - database
+      - mongodb
     volumes:
       - todo_details:/app/backend/todo-details
 
@@ -42,8 +46,22 @@ services:
     networks:
       - app-network
 
+  mongodb:
+    image: mongo:7.0
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USERNAME:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD:-password}
+      - MONGO_INITDB_DATABASE=todos_db
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "127.0.0.1:27017:27017"
+    networks:
+      - app-network
+
 volumes:
   mysql_data:
+  mongo_data:
   todo_details:
 
 networks:
