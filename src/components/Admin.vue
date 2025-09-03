@@ -700,6 +700,7 @@
 
 <script setup>
 import { inject, ref, onMounted, onUnmounted, computed } from 'vue'
+import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue'
 import axios from 'axios'
 import { API_BASE_URL } from '../config'
 
