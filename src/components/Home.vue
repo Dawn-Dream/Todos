@@ -8,7 +8,7 @@
   <Menu as="div" class="relative">
     <MenuButton class="flex items-center space-x-2 cursor-pointer text-white py-1 px-3 rounded-lg transition-all duration-300 bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75">
       <div class="flex flex-col items-start">
-        <span class="font-medium text-1xl">{{ user.name || 'Guest' }}</span>
+        <span class="font-medium text-1xl">{{ user?.name || 'Guest' }}</span>
         <span class="text-xs text-indigo-200 flex items-center">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -611,17 +611,17 @@ const checkEditPermission = (todo) => {
   }
   
   // 检查用户是否是任务的创建者
-  if (todo.creator_id === authStore.user.value.id) {
+  if (authStore.user.value && todo.creator_id === authStore.user.value.id) {
     return true
   }
   
   // 检查用户是否是任务的管理员
-  if (todo.admin_users && todo.admin_users.includes(authStore.user.value.id)) {
+  if (authStore.user.value && todo.admin_users && todo.admin_users.includes(authStore.user.value.id)) {
     return true
   }
   
   // 检查用户是否是任务关联用户组的组长
-  if (todo.Belonging_groups && todo.Belonging_groups.length > 0) {
+  if (authStore.user.value && todo.Belonging_groups && todo.Belonging_groups.length > 0) {
     for (const groupId of todo.Belonging_groups) {
       const group = allGroups.value.find(g => g.id === groupId)
       if (group && group.leaders && group.leaders.includes(authStore.user.value.id)) {
@@ -682,8 +682,8 @@ const userGroupsText = computed(() => {
   return groups.map(g => {
     const leaders = (g.leaders || [])
       .map(id => {
-        const u = allUsers.value.find(u => u.id === id)
-        return u ? u.name : id
+        const u = allUsers.value.find(user => user.id === id)
+        return u ? u.name : `未知用户(${id})`
       })
       .join(', ')
     return leaders ? `${g.name} (组长: ${leaders})` : g.name
