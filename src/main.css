@@ -1807,10 +1807,6 @@ button,
   touch-action: manipulation;
 }
 
-.visible {
-  visibility: visible;
-}
-
 .collapse {
   visibility: collapse;
 }
