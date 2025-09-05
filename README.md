@@ -113,6 +113,8 @@ npx web-push generate-vapid-keys
      本项目的 `backend/index.js` 已包含 `require('dotenv').config()`，无需通过 `-r dotenv/config` 预加载。
 
 # 本地后端（backend/.env）可用（如不使用 Docker）
+  
+```
 MONGODB_URI=mongodb://localhost:27017/todos_db
 PORT=3000
 ```
