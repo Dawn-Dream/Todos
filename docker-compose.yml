@@ -13,7 +13,7 @@ services:
     command: ["node", "backend/index.js"]
     environment:
       - NODE_ENV=production
-      - MONGODB_URI=mongodb://database:27018/todos_db
+      - MONGODB_URI=mongodb://database:27017/todos_db
       - JWT_SECRET=${JWT_SECRET}
       - VAPID_SUBJECT=${VAPID_SUBJECT}
       - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}
@@ -29,7 +29,7 @@ services:
 
   database:
     image: mongo:7.0
-    command: ["mongod", "--port", "27018"]
+    command: ["mongod", "--port", "27017"]
     environment:
       - MONGO_INITDB_DATABASE=todos_db
     volumes:
@@ -37,7 +37,7 @@ services:
     networks:
       - app-network
     ports:
-      - "0.0.0.0:27018:27018"
+      - "0.0.0.0:27017:27017"
 
 volumes:
   mongodb_data:

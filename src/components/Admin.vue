@@ -866,11 +866,14 @@ const submitNewUser = async () => {
       // 显示成功消息
       alert('用户添加成功')
       
-      // 刷新用户列表
-      await fetchUsers();
-      
-      // 刷新token以获取最新的用户信息
-      await authStore.fetchUserGroups()
+      // 刷新所有相关数据
+      await Promise.all([
+        fetchUsers(),
+        fetchGroups(),
+        fetchTodos(),
+        authStore.fetchUserGroups(),
+        fetchAllUsersAndGroups()
+      ])
     } else {
       alert('添加失败: ' + response.data.message)
     }
@@ -901,10 +904,14 @@ const submitNewGroup = async () => {
     if (response.status === 201) {
       isAddGroupModalVisible.value = false
       newGroupLeaders.value = [] // Reset leaders selection
-      // 刷新token以获取最新的用户组信息
-      await authStore.fetchUserGroups()
       alert('用户组添加成功')
-      fetchGroups() // 刷新用户组列表
+      // 刷新所有相关数据
+      await Promise.all([
+        fetchGroups(),
+        fetchUsers(),
+        authStore.fetchUserGroups(),
+        fetchAllUsersAndGroups()
+      ])
     } else {
       alert('添加用户组失败')
     }
@@ -951,11 +958,14 @@ const submitEditUser = async () => {
       // 显示成功消息
       alert('用户更新成功')
       
-      // 刷新用户列表
-      await fetchUsers();
-      
-      // 刷新token以获取最新的用户信息
-      await authStore.fetchUserGroups()
+      // 刷新所有相关数据
+      await Promise.all([
+        fetchUsers(),
+        fetchGroups(),
+        fetchTodos(),
+        authStore.fetchUserGroups(),
+        fetchAllUsersAndGroups()
+      ])
     } else {
       alert('更新失败: ' + response.data.message)
     }
@@ -986,9 +996,13 @@ const submitEditGroup = async () => {
     if (response.status === 200) {
       isEditGroupModalVisible.value = false
       alert('用户组更新成功')
-      // 刷新token以获取最新的用户组信息
-      await authStore.fetchUserGroups()
-      fetchGroups() // 刷新用户组列表
+      // 刷新所有相关数据
+      await Promise.all([
+        fetchGroups(),
+        fetchUsers(),
+        authStore.fetchUserGroups(),
+        fetchAllUsersAndGroups()
+      ])
     } else {
       alert('更新用户组失败')
     }
@@ -1038,11 +1052,14 @@ const deleteUser = async (userId) => {
       // 显示成功消息
       alert('用户删除成功')
       
-      // 刷新用户列表
-      await fetchUsers();
-      
-      // 刷新token以获取最新的用户信息
-      await authStore.fetchUserGroups()
+      // 刷新所有相关数据
+      await Promise.all([
+        fetchUsers(),
+        fetchGroups(),
+        fetchTodos(),
+        authStore.fetchUserGroups(),
+        fetchAllUsersAndGroups()
+      ])
     } else {
       alert('删除失败: ' + response.data.message)
     }
@@ -1063,11 +1080,14 @@ const deleteGroup = async (groupId) => {
 
     if (response.status === 200) {
       alert('用户组删除成功');
-      // 刷新token以获取最新的用户组信息
-      await authStore.fetchUserGroups();
-      // 刷新用户列表以更新用户的groupId
-      await fetchUsers();
-      fetchGroups(); // 刷新用户组列表
+      // 刷新所有相关数据
+      await Promise.all([
+        fetchGroups(),
+        fetchUsers(),
+        fetchTodos(),
+        authStore.fetchUserGroups(),
+        fetchAllUsersAndGroups()
+      ])
     } else {
       alert('删除用户组失败');
     }
@@ -1251,8 +1271,14 @@ const submitEditTask = async () => {
       // 显示成功消息
       alert('任务更新成功')
       
-      // 刷新任务列表
-      await fetchTodos();
+      // 刷新所有相关数据
+      await Promise.all([
+        fetchTodos(),
+        fetchUsers(),
+        fetchGroups(),
+        authStore.fetchUserGroups(),
+        fetchAllUsersAndGroups()
+      ])
     } else {
       alert('更新失败: ' + response.data.message)
     }
@@ -1276,8 +1302,15 @@ const deleteTask = async (taskId) => {
       }
     })
     
-    // 删除成功后刷新任务列表
-    await fetchTodos()
+    // 删除成功后刷新所有相关数据
+    await Promise.all([
+      fetchTodos(),
+      fetchUsers(),
+      fetchGroups(),
+      authStore.fetchUserGroups(),
+      fetchAllUsersAndGroups()
+    ])
+    alert('任务删除成功')
   } catch (error) {
     console.error('删除任务失败:', error)
     alert('删除任务失败')
