@@ -943,8 +943,8 @@ app.delete('/todos/:id', authenticateToken, checkTodoPermission, async (req, res
 
 // 启动服务器函数
 function startServer() {
-  app.listen(PORT, '127.0.0.1', () => {
-    console.log(`服务器运行在 http://127.0.0.1:${PORT}`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`服务器运行在 http://0.0.0.0:${PORT}`);
   });
 }
 
