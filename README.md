@@ -1,6 +1,6 @@
 # ToDos - 小组任务管理系统（完整说明）
 
-一个基于 Vue 3 + Vite + Node.js + Express + MySQL 的现代化任务管理系统，支持多用户、多用户组、精细化权限与任务详情（Markdown）。
+一个基于 Vue 3 + Vite + Node.js + Express + MongoDB 的现代化任务管理系统，支持多用户、多用户组、精细化权限与任务详情（Markdown）。
 
 本 README 覆盖：功能特性、架构与目录、环境变量、启动与部署、API 列表、权限模型、数据库迁移、常见问题等，确保你能快速、稳定地运行与二次开发。
 
@@ -34,8 +34,8 @@
 ## 技术栈
 
 - 前端：Vue 3、Vue Router、Axios、Tailwind CSS、DaisyUI、Marked、Vite、PWA (Service Worker, Web App Manifest)
-- 后端：Node.js、Express、JWT、bcryptjs、mysql2、web-push
-- 数据库：MySQL 8.0
+- 后端：Node.js、Express、JWT、bcryptjs、mongoose、web-push
+- 数据库：MongoDB 7.0
 - 部署：Docker / Docker Compose（生产镜像已提供）
 
 ---
@@ -59,10 +59,11 @@ Todos/
 │   └── sw.js                   # Service Worker 文件
 ├── backend/
 │   ├── index.js                # Express 入口（鉴权、路由、权限校验、详情文件读写）
-│   └── database/               # 数据库连接与迁移
-│       ├── connection.js       # 自动创建库、重试、断线重连、安全查询
-│       ├── schema.js           # 表结构 DDL
-│       └── migration.js        # 版本迁移与并发锁
+│   └── database/               # 数据库连接与数据访问
+│       ├── mongodb-connection.js  # MongoDB连接管理
+│       ├── mongodb-schema.js      # MongoDB文档结构和索引
+│       ├── mongodb-repository.js  # 数据访问层
+│       └── migration-script.js    # MySQL到MongoDB迁移脚本
 └── README.md
 ```
 
@@ -74,8 +75,8 @@ Todos/
 
 ```
 # Docker 部署必填
-MYSQL_ROOT_PASSWORD=强随机密码
 JWT_SECRET=强随机JWT密钥
+MONGODB_URI=mongodb://database:27017/todos_db
 
 # PWA Web Push 配置（后端使用）
 
@@ -112,17 +113,14 @@ npx web-push generate-vapid-keys
      本项目的 `backend/index.js` 已包含 `require('dotenv').config()`，无需通过 `-r dotenv/config` 预加载。
 
 # 本地后端（backend/.env）可用（如不使用 Docker）
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=你的数据库密码
-DB_NAME=todos_db
+MONGODB_URI=mongodb://localhost:27017/todos_db
 PORT=3000
 ```
 
 说明：
-- 后端启动将自动创建 DB_NAME 指定的数据库（若不存在），并执行所有未应用的迁移。
-- 生产环境务必使用强随机的 JWT_SECRET 与数据库密码，不要提交到版本库。
+- 后端启动将自动连接到MongoDB数据库，并创建必要的索引。
+- 生产环境务必使用强随机的 JWT_SECRET，不要提交到版本库。
+- 如需从MySQL迁移，请参考 `MIGRATION_PLAN.md` 和使用 `migration-script.js`。
 
 ---
 
@@ -132,8 +130,8 @@ PORT=3000
 
 1) 准备环境变量
 ```
-cp .env.example .env
-# 编辑 .env，设置 MYSQL_ROOT_PASSWORD、JWT_SECRET、VAPID_SUBJECT、VAPID_PUBLIC_KEY、VAPID_PRIVATE_KEY
+cp .env.docker .env
+# 编辑 .env，设置 JWT_SECRET、VAPID_SUBJECT、VAPID_PUBLIC_KEY、VAPID_PRIVATE_KEY
 ```
 
 2) 启动
@@ -146,6 +144,10 @@ docker-compose up -d
 - 后端（直连）：http://localhost:10002
 
 > 说明：前端镜像内置 Nginx 将 /api 反向代理到后端，无需改动前端代码。PWA 相关功能（如推送）需要 HTTPS 环境，在生产部署时请配置 HTTPS。
+>
+> 详细的Docker部署指南请参考：[DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md)
+>
+> 如需从MySQL版本迁移，请参考：[MIGRATION_PLAN.md](MIGRATION_PLAN.md)
 
 ### 方式二：本地开发（独立运行前后端）
 
