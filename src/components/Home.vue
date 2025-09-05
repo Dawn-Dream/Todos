@@ -43,7 +43,7 @@
                 active ? 'bg-gray-100' : '',
                 'block px-4 py-2 text-sm text-gray-700'
               ]">
-              系统设置 未实现
+              系统设置
             </a>
           </MenuItem>
           <MenuItem v-if="user && user.role === 'admin'" v-slot="{ active }">

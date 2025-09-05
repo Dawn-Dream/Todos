@@ -902,6 +902,21 @@ const submitNewGroup = async () => {
     })
 
     if (response.status === 201) {
+      const newGroupId = response.data.groupId
+      
+      // 将组长添加为该用户组的成员
+      if (newGroupLeaders.value && newGroupLeaders.value.length > 0) {
+        for (const leaderId of newGroupLeaders.value) {
+          try {
+            await axios.post(`${API_BASE_URL}/users/${leaderId}/groups/${newGroupId}`, {}, {
+              headers: { Authorization: `Bearer ${authStore.token.value}` }
+            })
+          } catch (memberError) {
+            console.error(`添加组长 ${leaderId} 为成员时出错:`, memberError)
+          }
+        }
+      }
+      
       isAddGroupModalVisible.value = false
       newGroupLeaders.value = [] // Reset leaders selection
       alert('用户组添加成功')
@@ -994,6 +1009,23 @@ const submitEditGroup = async () => {
     })
 
     if (response.status === 200) {
+      const groupId = editingGroup.value.id
+      
+      // 将新的组长添加为该用户组的成员（如果他们还不是成员的话）
+      if (editGroupLeaders.value && editGroupLeaders.value.length > 0) {
+        for (const leaderId of editGroupLeaders.value) {
+          try {
+            // 尝试添加组长为成员，如果已经是成员则后端会处理重复情况
+            await axios.post(`${API_BASE_URL}/users/${leaderId}/groups/${groupId}`, {}, {
+              headers: { Authorization: `Bearer ${authStore.token.value}` }
+            })
+          } catch (memberError) {
+            // 如果用户已经是成员，后端可能返回错误，这里忽略该错误
+            console.log(`组长 ${leaderId} 可能已经是用户组成员:`, memberError.response?.data?.message || memberError.message)
+          }
+        }
+      }
+      
       isEditGroupModalVisible.value = false
       alert('用户组更新成功')
       // 刷新所有相关数据
